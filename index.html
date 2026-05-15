@@ -94,11 +94,19 @@
 
         async function loadData() {
             setSync(true);
-            const { data, error } = await supabase.from('transactions').select('*');
-            if (!error && data) {
-                logs = data;
-                updateUI();
+            try {
+                const { data, error } = await supabase.from('transactions').select('*');
+                if (error) {
+                    console.error("ОШИБКА БАЗЫ SUPABASE:", error);
+                    alert("Бляха, ошибка базы данных: " + error.message);
+                } else if (data) {
+                    logs = data;
+                }
+            } catch (err) {
+                console.error("ОШИБКА СОЕДИНЕНИЯ:", err);
+                alert("Скрипт наебнулся при запросе к серверу: " + err.message);
             }
+            updateUI(); // Отрисовываем интерфейс в любом случае
             setSync(false);
         }
 
@@ -124,7 +132,10 @@
 
             // В базу
             setSync(true);
-            await supabase.from('transactions').insert([entry]);
+            const { error } = await supabase.from('transactions').insert([entry]);
+            if (error) {
+                alert("Не удалось сохранить запись: " + error.message);
+            }
             setSync(false);
         }
 
@@ -132,7 +143,8 @@
             logs = logs.filter(l => l.id != id);
             updateUI();
             setSync(true);
-            await supabase.from('transactions').delete().eq('id', id);
+            const { error } = await supabase.from('transactions').delete().eq('id', id);
+            if (error) alert("Не удалось удалить: " + error.message);
             setSync(false);
         }
 
@@ -160,15 +172,19 @@
 
             const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
             filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
-            chart.data.datasets[0].data = hIn;
-            chart.data.datasets[1].data = hOut;
-            chart.update();
+            
+            if (chart) {
+                chart.data.datasets[0].data = hIn;
+                chart.data.datasets[1].data = hOut;
+                chart.update();
+            }
         }
 
         function changeDay(o) { selectedDate.setDate(selectedDate.getDate() + o); updateUI(); }
         function goToToday() { selectedDate = new Date(); updateUI(); }
 
         function init() {
+            // 1. Инициализируем график
             const ctx = document.getElementById('activityChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
@@ -181,10 +197,16 @@
                 },
                 options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
             });
+            
             document.getElementById('btn-in').onclick = () => addData('in');
             document.getElementById('btn-out').onclick = () => addData('out');
             document.getElementById('qty-in').onkeydown = e => e.key === 'Enter' && addData('in');
             document.getElementById('qty-out').onkeydown = e => e.key === 'Enter' && addData('out');
+            
+            // 2. Отрисовываем интерфейс до загрузки данных
+            updateUI(); 
+            
+            // 3. Пытаемся стянуть базу
             loadData();
         }
 
