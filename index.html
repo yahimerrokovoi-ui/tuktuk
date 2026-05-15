@@ -79,10 +79,11 @@
     </div>
 
     <script>
-        // КОНФИГУРАЦИЯ SUPABASE
         const SUPABASE_URL = 'https://sdxclbfwetgadcsvyyom.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkeGNsYmZ3ZXRnYWRjc3Z5eW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDg4NDAsImV4cCI6MjA5NDQyNDg0MH0.zil5m_Q6caiD3QpQDn6tS_WxSoqJmHCQEojyD1FbgZA';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // ИЗМЕНЕНО: теперь переменная называется db, конфликта нет
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let logs = [];
         let chart;
@@ -94,19 +95,13 @@
 
         async function loadData() {
             setSync(true);
-            try {
-                const { data, error } = await supabase.from('transactions').select('*');
-                if (error) {
-                    console.error("ОШИБКА БАЗЫ SUPABASE:", error);
-                    alert("Бляха, ошибка базы данных: " + error.message);
-                } else if (data) {
-                    logs = data;
-                }
-            } catch (err) {
-                console.error("ОШИБКА СОЕДИНЕНИЯ:", err);
-                alert("Скрипт наебнулся при запросе к серверу: " + err.message);
+            const { data, error } = await db.from('transactions').select('*');
+            if (!error && data) {
+                logs = data;
+                updateUI();
+            } else if (error) {
+                console.error("Ошибка Supabase:", error);
             }
-            updateUI(); // Отрисовываем интерфейс в любом случае
             setSync(false);
         }
 
@@ -125,17 +120,12 @@
                 date: selectedDate.toLocaleDateString('ru-RU')
             };
 
-            // Оптимистично в UI
             logs.push(entry);
             input.value = '';
             updateUI();
 
-            // В базу
             setSync(true);
-            const { error } = await supabase.from('transactions').insert([entry]);
-            if (error) {
-                alert("Не удалось сохранить запись: " + error.message);
-            }
+            await db.from('transactions').insert([entry]);
             setSync(false);
         }
 
@@ -143,8 +133,7 @@
             logs = logs.filter(l => l.id != id);
             updateUI();
             setSync(true);
-            const { error } = await supabase.from('transactions').delete().eq('id', id);
-            if (error) alert("Не удалось удалить: " + error.message);
+            await db.from('transactions').delete().eq('id', id);
             setSync(false);
         }
 
@@ -170,10 +159,9 @@
                 </div>
             `).join('') : '<p class="text-center text-slate-700 py-4">Нет записей</p>';
 
-            const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
-            filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
-            
             if (chart) {
+                const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
+                filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
                 chart.data.datasets[0].data = hIn;
                 chart.data.datasets[1].data = hOut;
                 chart.update();
@@ -184,7 +172,6 @@
         function goToToday() { selectedDate = new Date(); updateUI(); }
 
         function init() {
-            // 1. Инициализируем график
             const ctx = document.getElementById('activityChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
@@ -203,10 +190,7 @@
             document.getElementById('qty-in').onkeydown = e => e.key === 'Enter' && addData('in');
             document.getElementById('qty-out').onkeydown = e => e.key === 'Enter' && addData('out');
             
-            // 2. Отрисовываем интерфейс до загрузки данных
-            updateUI(); 
-            
-            // 3. Пытаемся стянуть базу
+            updateUI();
             loadData();
         }
 
@@ -216,7 +200,7 @@
             const toDelete = logs.filter(l => l.date === dateStr);
             logs = logs.filter(l => l.date !== dateStr);
             updateUI();
-            for(let l of toDelete) await supabase.from('transactions').delete().eq('id', l.id);
+            for(let l of toDelete) await db.from('transactions').delete().eq('id', l.id);
         }
 
         window.onload = init;
