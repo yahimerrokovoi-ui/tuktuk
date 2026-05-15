@@ -19,18 +19,18 @@
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-2xl mx-auto">
-        <div id="sync-status" class="h-4 mb-4 text-xs font-bold uppercase tracking-widest text-center text-emerald-400 transition-opacity duration-300 opacity-0">
+        <div id="sync-status" class="h-4 mb-4 text-xs font-bold uppercase tracking-widest text-center text-emerald-400 transition-opacity duration-300 opacity-0 pointer-events-none">
             Синхронизация...
         </div>
 
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-3">
-                <button onclick="changeDay(-1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400">◀</button>
+                <button onclick="changeDay(-1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 cursor-pointer">◀</button>
                 <div class="text-center min-w-[140px]">
                     <p onclick="goToToday()" class="text-slate-400 text-[10px] uppercase tracking-widest font-bold cursor-pointer">Отчет за</p>
                     <h1 id="current-date-title" class="text-lg font-bold text-white whitespace-nowrap">...</h1>
                 </div>
-                <button onclick="changeDay(1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400">▶</button>
+                <button onclick="changeDay(1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 cursor-pointer">▶</button>
             </div>
             
             <div class="flex gap-2">
@@ -48,16 +48,16 @@
         <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500">
             <div class="flex gap-4">
                 <input type="number" id="qty-in" placeholder="Сколько ЗАБРАЛ?" 
-                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white">
-                <button id="btn-in" class="bg-blue-600 px-8 py-3 rounded-xl font-bold">OK</button>
+                    class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white focus:ring-2 focus:ring-blue-500">
+                <button id="btn-in" class="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold cursor-pointer transition-colors">OK</button>
             </div>
         </div>
 
         <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500">
             <div class="flex gap-4">
                 <input type="number" id="qty-out" placeholder="На ОТПРАВКУ?" 
-                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white">
-                <button id="btn-out" class="bg-red-600 px-8 py-3 rounded-xl font-bold">OK</button>
+                    class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white focus:ring-2 focus:ring-red-500">
+                <button id="btn-out" class="bg-red-600 hover:bg-red-500 px-8 py-3 rounded-xl font-bold cursor-pointer transition-colors">OK</button>
             </div>
         </div>
 
@@ -68,13 +68,13 @@
         <div class="glass rounded-2xl p-6 mb-6">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-slate-400 uppercase text-xs font-bold tracking-widest">Лог событий</h3>
-                <button onclick="downloadCSV()" class="text-xs text-slate-400 font-medium">CSV</button>
+                <button onclick="downloadCSV()" class="text-xs text-slate-400 font-medium hover:text-white cursor-pointer">CSV</button>
             </div>
             <div id="log" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
         </div>
 
         <div class="text-center">
-            <button onclick="clearDay()" class="text-slate-600 text-[10px] uppercase font-bold hover:text-red-500">Очистить день</button>
+            <button onclick="clearDay()" class="text-slate-600 text-[10px] uppercase font-bold hover:text-red-500 cursor-pointer">Очистить день</button>
         </div>
     </div>
 
@@ -82,7 +82,6 @@
         const SUPABASE_URL = 'https://sdxclbfwetgadcsvyyom.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkeGNsYmZ3ZXRnYWRjc3Z5eW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDg4NDAsImV4cCI6MjA5NDQyNDg0MH0.zil5m_Q6caiD3QpQDn6tS_WxSoqJmHCQEojyD1FbgZA';
         
-        // ИЗМЕНЕНО: теперь переменная называется db, конфликта нет
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let logs = [];
@@ -109,7 +108,11 @@
             const id = type === 'in' ? 'qty-in' : 'qty-out';
             const input = document.getElementById(id);
             const val = parseInt(input.value);
-            if (isNaN(val) || val <= 0) return;
+            
+            if (isNaN(val) || val <= 0) {
+                input.value = '';
+                return;
+            }
 
             const entry = {
                 id: Date.now().toString(),
@@ -155,7 +158,7 @@
                 <div class="flex justify-between items-center p-3 rounded-lg border border-slate-800 ${l.type === 'out' ? 'bg-red-500/5' : 'bg-blue-500/5'}">
                     <span class="text-xs text-slate-500">${l.time}</span>
                     <span class="font-bold ${l.type === 'out' ? 'text-red-400' : 'text-blue-400'}">+${l.amount}</span>
-                    <button onclick="remove('${l.id}')" class="text-slate-700 hover:text-red-500">✕</button>
+                    <button onclick="remove('${l.id}')" class="text-slate-700 hover:text-red-500 cursor-pointer p-2">✕</button>
                 </div>
             `).join('') : '<p class="text-center text-slate-700 py-4">Нет записей</p>';
 
@@ -185,10 +188,17 @@
                 options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
             });
             
+            // Назначаем обработчики кликов
             document.getElementById('btn-in').onclick = () => addData('in');
             document.getElementById('btn-out').onclick = () => addData('out');
-            document.getElementById('qty-in').onkeydown = e => e.key === 'Enter' && addData('in');
-            document.getElementById('qty-out').onkeydown = e => e.key === 'Enter' && addData('out');
+            
+            // Исправленные обработчики нажатия клавиши Enter
+            document.getElementById('qty-in').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') addData('in');
+            });
+            document.getElementById('qty-out').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') addData('out');
+            });
             
             updateUI();
             loadData();
