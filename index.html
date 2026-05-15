@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Tracker Cloud</title>
+    <title>Daily Tracker Cloud (Supabase)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
@@ -19,312 +20,184 @@
 <body class="p-4 md:p-8">
     <div class="max-w-2xl mx-auto">
         <div id="sync-status" class="h-4 mb-4 text-xs font-bold uppercase tracking-widest text-center text-emerald-400 transition-opacity duration-300 opacity-0">
-            Синхронизация с базой...
+            Синхронизация...
         </div>
 
         <div class="flex justify-between items-center mb-8">
-            <div class="flex items-center gap-3 md:gap-5">
-                <button onclick="changeDay(-1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 hover:text-white transition-colors shadow-lg" title="Предыдущий день">◀</button>
+            <div class="flex items-center gap-3">
+                <button onclick="changeDay(-1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400">◀</button>
                 <div class="text-center min-w-[140px]">
-                    <p onclick="goToToday()" class="text-slate-400 text-[10px] uppercase tracking-widest font-bold cursor-pointer hover:text-blue-400 transition-colors" title="Вернуться к сегодня">Отчет за</p>
-                    <h1 id="current-date-title" class="text-lg md:text-xl font-bold tracking-tight text-white whitespace-nowrap">...</h1>
+                    <p onclick="goToToday()" class="text-slate-400 text-[10px] uppercase tracking-widest font-bold cursor-pointer">Отчет за</p>
+                    <h1 id="current-date-title" class="text-lg font-bold text-white whitespace-nowrap">...</h1>
                 </div>
-                <button onclick="changeDay(1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 hover:text-white transition-colors shadow-lg" title="Следующий день">▶</button>
+                <button onclick="changeDay(1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400">▶</button>
             </div>
             
-            <div class="flex gap-2 md:gap-4">
+            <div class="flex gap-2">
                 <div class="text-right bg-blue-500/10 px-3 py-2 rounded-2xl border border-blue-500/20">
-                    <div class="text-[9px] md:text-[10px] uppercase tracking-wider text-blue-400 font-bold">Забрано</div>
-                    <div id="total-in" class="text-2xl md:text-3xl font-black text-blue-400 leading-none">0</div>
+                    <div class="text-[9px] uppercase text-blue-400 font-bold">Забрано</div>
+                    <div id="total-in" class="text-2xl font-black text-blue-400">0</div>
                 </div>
                 <div class="text-right bg-red-500/10 px-3 py-2 rounded-2xl border border-red-500/20">
-                    <div class="text-[9px] md:text-[10px] uppercase tracking-wider text-red-400 font-bold">Отправка</div>
-                    <div id="total-out" class="text-2xl md:text-3xl font-black text-red-400 leading-none">0</div>
+                    <div class="text-[9px] uppercase text-red-400 font-bold">Отправка</div>
+                    <div id="total-out" class="text-2xl font-black text-red-400">0</div>
                 </div>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500 relative overflow-hidden">
-            <div class="flex gap-4 relative z-10">
-                <input type="number" id="qty-in" placeholder="Сколько ЗАБРАЛ?" autocomplete="off"
-                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-blue-500 outline-none text-lg text-white placeholder:text-slate-500">
-                <button id="btn-in" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">OK</button>
+        <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500">
+            <div class="flex gap-4">
+                <input type="number" id="qty-in" placeholder="Сколько ЗАБРАЛ?" 
+                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white">
+                <button id="btn-in" class="bg-blue-600 px-8 py-3 rounded-xl font-bold">OK</button>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500 relative overflow-hidden">
-            <div class="flex gap-4 relative z-10">
-                <input type="number" id="qty-out" placeholder="Товар на ОТПРАВКУ?" autocomplete="off"
-                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-red-500 outline-none text-lg text-white placeholder:text-slate-500">
-                <button id="btn-out" class="bg-red-600 hover:bg-red-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-red-500/20">OK</button>
+        <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500">
+            <div class="flex gap-4">
+                <input type="number" id="qty-out" placeholder="На ОТПРАВКУ?" 
+                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white">
+                <button id="btn-out" class="bg-red-600 px-8 py-3 rounded-xl font-bold">OK</button>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8 relative">
+        <div class="glass rounded-2xl p-6 mb-8">
             <canvas id="activityChart"></canvas>
         </div>
 
         <div class="glass rounded-2xl p-6 mb-6">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-slate-400 uppercase text-xs font-bold tracking-widest">Лог событий</h3>
-                <button onclick="downloadCSV()" class="text-xs text-slate-400 hover:text-white font-medium bg-slate-800 px-3 py-1 rounded-md transition-colors">Экспорт в CSV</button>
+                <button onclick="downloadCSV()" class="text-xs text-slate-400 font-medium">CSV</button>
             </div>
             <div id="log" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
         </div>
-        
-        <div class="flex gap-4 justify-center">
-            <button onclick="clearSelectedDayData()" class="text-slate-600 text-xs hover:text-red-500 transition-colors uppercase tracking-widest font-bold">Очистить данные за этот день</button>
+
+        <div class="text-center">
+            <button onclick="clearDay()" class="text-slate-600 text-[10px] uppercase font-bold hover:text-red-500">Очистить день</button>
         </div>
     </div>
 
     <script>
-        const DB_URL = 'https://script.google.com/macros/s/AKfycbxTaV9iYJA9KKXcR0rXHZTVfNtVDF9oVSPtLx_CflZDH9FTlU3X0mDDiyPDxtnxNmlp/exec';
-        
+        // КОНФИГУРАЦИЯ SUPABASE
+        const SUPABASE_URL = 'https://sdxclbfwetgadcsvyyom.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkeGNsYmZ3ZXRnYWRjc3Z5eW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDg4NDAsImV4cCI6MjA5NDQyNDg0MH0.zil5m_Q6caiD3QpQDn6tS_WxSoqJmHCQEojyD1FbgZA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let logs = [];
         let chart;
         let selectedDate = new Date();
 
-        function getSelectedDateString() {
-            return selectedDate.toLocaleDateString('ru-RU');
+        function setSync(show) {
+            document.getElementById('sync-status').style.opacity = show ? "1" : "0";
         }
 
-        function setSyncStatus(show, text = "Синхронизация...") {
-            const el = document.getElementById('sync-status');
-            el.innerText = text;
-            if (show) {
-                el.classList.remove('opacity-0');
-                el.classList.add('animate-pulse');
-            } else {
-                el.classList.add('opacity-0');
-                el.classList.remove('animate-pulse');
-            }
-        }
-
-        // Загрузка данных с обходом жесткого кэширования GET-запросов (добавлен ?t=...)
-        async function loadDataFromDB() {
-            setSyncStatus(true, "Загрузка базы данных...");
-            try {
-                const noCacheUrl = DB_URL + '?t=' + new Date().getTime();
-                const response = await fetch(noCacheUrl);
-                const data = await response.json();
-                
-                if (Array.isArray(data)) {
-                    logs = data; 
-                }
+        async function loadData() {
+            setSync(true);
+            const { data, error } = await supabase.from('transactions').select('*');
+            if (!error && data) {
+                logs = data;
                 updateUI();
-            } catch (error) {
-                console.error('Ошибка загрузки базы:', error);
-                setSyncStatus(true, "Ошибка подключения к облаку");
-                setTimeout(() => setSyncStatus(false), 3000);
-            } else {
-                setSyncStatus(false);
             }
+            setSync(false);
         }
 
-        function changeDay(offset) {
-            selectedDate.setDate(selectedDate.getDate() + offset);
+        async function addData(type) {
+            const id = type === 'in' ? 'qty-in' : 'qty-out';
+            const input = document.getElementById(id);
+            const val = parseInt(input.value);
+            if (isNaN(val) || val <= 0) return;
+
+            const entry = {
+                id: Date.now().toString(),
+                type: type,
+                amount: val,
+                time: new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}),
+                hour: new Date().getHours(),
+                date: selectedDate.toLocaleDateString('ru-RU')
+            };
+
+            // Оптимистично в UI
+            logs.push(entry);
+            input.value = '';
             updateUI();
+
+            // В базу
+            setSync(true);
+            await supabase.from('transactions').insert([entry]);
+            setSync(false);
         }
 
-        function goToToday() {
-            selectedDate = new Date();
+        async function remove(id) {
+            logs = logs.filter(l => l.id != id);
             updateUI();
+            setSync(true);
+            await supabase.from('transactions').delete().eq('id', id);
+            setSync(false);
         }
 
-        function initChart() {
+        function updateUI() {
+            const dateStr = selectedDate.toLocaleDateString('ru-RU');
+            const isToday = dateStr === new Date().toLocaleDateString('ru-RU');
+            document.getElementById('current-date-title').innerText = selectedDate.toLocaleDateString('ru-RU', {day:'numeric', month:'long', year:'numeric'}) + (isToday ? ' (Сегодня)' : '');
+            
+            const filtered = logs.filter(l => l.date === dateStr);
+            
+            const sumIn = filtered.filter(l => l.type === 'in').reduce((a,b) => a + b.amount, 0);
+            const sumOut = filtered.filter(l => l.type === 'out').reduce((a,b) => a + b.amount, 0);
+            
+            document.getElementById('total-in').innerText = sumIn;
+            document.getElementById('total-out').innerText = sumOut;
+
+            const logEl = document.getElementById('log');
+            logEl.innerHTML = filtered.length ? [...filtered].reverse().map(l => `
+                <div class="flex justify-between items-center p-3 rounded-lg border border-slate-800 ${l.type === 'out' ? 'bg-red-500/5' : 'bg-blue-500/5'}">
+                    <span class="text-xs text-slate-500">${l.time}</span>
+                    <span class="font-bold ${l.type === 'out' ? 'text-red-400' : 'text-blue-400'}">+${l.amount}</span>
+                    <button onclick="remove('${l.id}')" class="text-slate-700 hover:text-red-500">✕</button>
+                </div>
+            `).join('') : '<p class="text-center text-slate-700 py-4">Нет записей</p>';
+
+            const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
+            filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
+            chart.data.datasets[0].data = hIn;
+            chart.data.datasets[1].data = hOut;
+            chart.update();
+        }
+
+        function changeDay(o) { selectedDate.setDate(selectedDate.getDate() + o); updateUI(); }
+        function goToToday() { selectedDate = new Date(); updateUI(); }
+
+        function init() {
             const ctx = document.getElementById('activityChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
                     datasets: [
-                        {
-                            label: 'Забрано', data: Array(24).fill(0),
-                            borderColor: '#3b82f6', borderWidth: 3, backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#3b82f6'
-                        },
-                        {
-                            label: 'Отправка', data: Array(24).fill(0),
-                            borderColor: '#ef4444', borderWidth: 3, backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#ef4444'
-                        }
+                        { label: 'Вход', data: [], borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
+                        { label: 'Выход', data: [], borderColor: '#ef4444', tension: 0.4, fill: true, backgroundColor: 'rgba(239, 68, 68, 0.05)' }
                     ]
                 },
-                options: { 
-                    responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false },
-                    scales: { y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b', precision: 0 } }, x: { grid: { display: false }, ticks: { color: '#64748b' } } },
-                    plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleColor: '#fff', padding: 10 } }
-                }
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
             });
-
             document.getElementById('btn-in').onclick = () => addData('in');
-            document.getElementById('qty-in').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addData('in'); } };
-            
             document.getElementById('btn-out').onclick = () => addData('out');
-            document.getElementById('qty-out').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addData('out'); } };
+            document.getElementById('qty-in').onkeydown = e => e.key === 'Enter' && addData('in');
+            document.getElementById('qty-out').onkeydown = e => e.key === 'Enter' && addData('out');
+            loadData();
+        }
 
-            // Отрисовка пустого интерфейса до загрузки базы
+        async function clearDay() {
+            if(!confirm('Удалить всё за этот день?')) return;
+            const dateStr = selectedDate.toLocaleDateString('ru-RU');
+            const toDelete = logs.filter(l => l.date === dateStr);
+            logs = logs.filter(l => l.date !== dateStr);
             updateUI();
-            
-            // Запуск стягивания данных с облака
-            loadDataFromDB();
+            for(let l of toDelete) await supabase.from('transactions').delete().eq('id', l.id);
         }
 
-        async function addData(type) {
-            const inputId = type === 'in' ? 'qty-in' : 'qty-out';
-            const input = document.getElementById(inputId);
-            const val = input.value.trim();
-            const qty = parseInt(val);
-            if (isNaN(qty) || qty <= 0) return;
-
-            const now = new Date();
-            const entry = {
-                id: Date.now().toString(),
-                type: type,
-                amount: qty,
-                time: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-                hour: now.getHours(),
-                date: getSelectedDateString()
-            };
-
-            // Оптимистичное добавление в UI
-            logs.push(entry);
-            input.value = '';
-            updateUI();
-
-            setSyncStatus(true, "Отправка...");
-            try {
-                await fetch(DB_URL, { 
-                    method: 'POST', 
-                    mode: 'no-cors',
-                    body: JSON.stringify(entry) 
-                });
-            } catch (error) {
-                console.error("Ошибка при сохранении:", error);
-            }
-            setSyncStatus(false);
-        }
-
-        async function deleteEntry(id) {
-            logs = logs.filter(l => l.id.toString() !== id.toString());
-            updateUI();
-
-            setSyncStatus(true, "Удаление...");
-            try {
-                await fetch(DB_URL, { 
-                    method: 'POST', 
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'delete', id: id.toString() }) 
-                });
-            } catch (error) {
-                console.error("Ошибка при удалении:", error);
-            }
-            setSyncStatus(false);
-        }
-
-        function updateUI() {
-            const targetDateStr = getSelectedDateString();
-            const isToday = targetDateStr === new Date().toLocaleDateString('ru-RU');
-            
-            let titleText = selectedDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-            if (isToday) titleText += ' (Сегодня)';
-            document.getElementById('current-date-title').innerText = titleText;
-            
-            document.getElementById('current-date-title').className = isToday 
-                ? "text-lg md:text-xl font-bold tracking-tight text-white whitespace-nowrap"
-                : "text-lg md:text-xl font-bold tracking-tight text-amber-400 whitespace-nowrap";
-
-            const targetLogs = logs.filter(l => l.date === targetDateStr);
-            
-            const totalIn = targetLogs.filter(l => l.type === 'in' || !l.type).reduce((sum, l) => sum + l.amount, 0);
-            const totalOut = targetLogs.filter(l => l.type === 'out').reduce((sum, l) => sum + l.amount, 0);
-            
-            document.getElementById('total-in').innerText = totalIn;
-            document.getElementById('total-out').innerText = totalOut;
-
-            const logContainer = document.getElementById('log');
-            if (targetLogs.length === 0) {
-                logContainer.innerHTML = '<p class="text-slate-600 text-center text-sm py-4">В этот день записей нет.</p>';
-            } else {
-                logContainer.innerHTML = [...targetLogs].reverse().map(l => {
-                    const isOut = l.type === 'out';
-                    const colorClass = isOut ? 'text-red-400' : 'text-blue-400';
-                    const bgClass = isOut ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20';
-                    const label = isOut ? 'Отправка' : 'Забрал';
-                    
-                    return `
-                    <div class="flex justify-between items-center border border-slate-700/50 ${bgClass} rounded-lg p-3 group transition-all hover:bg-slate-800/50">
-                        <div class="flex items-center gap-4">
-                            <span class="text-slate-400 text-sm font-mono">${l.time}</span>
-                            <span class="text-xs uppercase tracking-wider font-bold ${colorClass} opacity-70">${label}</span>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <span class="font-black text-lg ${colorClass}">+${l.amount}</span>
-                            <button onclick="deleteEntry('${l.id}')" class="text-slate-600 hover:text-red-500 transition-colors px-2 py-1 bg-slate-900 rounded opacity-0 group-hover:opacity-100 focus:opacity-100" title="Удалить">✕</button>
-                        </div>
-                    </div>
-                `}).join('');
-            }
-
-            const hourlyIn = Array(24).fill(0);
-            const hourlyOut = Array(24).fill(0);
-            
-            targetLogs.forEach(l => {
-                if (l.type === 'in' || !l.type) hourlyIn[l.hour] += l.amount;
-                if (l.type === 'out') hourlyOut[l.hour] += l.amount;
-            });
-            
-            if (chart) {
-                chart.data.datasets[0].data = hourlyIn;
-                chart.data.datasets[1].data = hourlyOut;
-                chart.update();
-            }
-        }
-
-        async function clearSelectedDayData() {
-            if(!confirm('Точно удалить все записи за ВЫБРАННЫЙ день? Это сотрет их и из базы.')) return;
-            const targetDateStr = getSelectedDateString();
-            const targetLogs = logs.filter(l => l.date === targetDateStr);
-            
-            logs = logs.filter(l => l.date !== targetDateStr);
-            updateUI();
-
-            setSyncStatus(true, "Массовое удаление...");
-            for (let l of targetLogs) {
-                try {
-                    await fetch(DB_URL, { 
-                        method: 'POST', 
-                        mode: 'no-cors',
-                        body: JSON.stringify({ action: 'delete', id: l.id.toString() }) 
-                    });
-                } catch(e) {
-                    console.error("Ошибка при пакетном удалении:", e);
-                }
-            }
-            setSyncStatus(false);
-        }
-
-        function downloadCSV() {
-            const targetDateStr = getSelectedDateString();
-            const targetLogs = logs.filter(l => l.date === targetDateStr);
-            if (targetLogs.length === 0) return alert('В этот день нечего выгружать.');
-            
-            let csv = "\uFEFFДата,Время,Тип операции,Количество\n";
-            targetLogs.forEach(l => { 
-                const typeStr = l.type === 'out' ? 'Отправка' : 'Забрано';
-                csv += `${l.date},${l.time},${typeStr},${l.amount}\n`; 
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `otchet_${targetDateStr}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        window.onload = initChart;
+        window.onload = init;
     </script>
 </body>
 </html>
