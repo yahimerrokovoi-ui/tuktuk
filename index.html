@@ -46,82 +46,39 @@
         let logs = JSON.parse(localStorage.getItem('dailyLogs')) || [];
         let chart;
 
-        function initChart() {
-            const ctx = document.getElementById('activityChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [{
-                        label: 'Забрано товара',
-                        data: Array(24).fill(0),
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96, 165, 250, 0.2)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { 
-                    responsive: true,
-                    scales: { y: { beginAtZero: true, grid: { color: '#334155' } }, x: { grid: { display: false } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-            updateUI();
+        // ... (начало кода оставить прежним до функции initChart)
+
+function initChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+            datasets: [{
+                label: 'Забрано товара',
+                data: Array(24).fill(0),
+                borderColor: '#60a5fa',
+                backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { 
+            responsive: true,
+            scales: { y: { beginAtZero: true, grid: { color: '#334155' } }, x: { grid: { display: false } } },
+            plugins: { legend: { display: false } }
         }
+    });
 
-        function addData() {
-            const qty = document.getElementById('quantity').value;
-            if (!qty) return;
-
-            const entry = {
-                id: Date.now(),
-                amount: parseInt(qty),
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                hour: new Date().getHours(),
-                date: new Date().toLocaleDateString()
-            };
-
-            logs.push(entry);
-            save();
-            document.getElementById('quantity').value = '';
-            updateUI();
+    // ДОБАВЛЕНО: Слушатель нажатия Enter
+    document.getElementById('quantity').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            addData();
         }
+    });
 
-        function save() {
-            localStorage.setItem('dailyLogs', JSON.stringify(logs));
-        }
-
-        function updateUI() {
-            const today = new Date().toLocaleDateString();
-            const todayLogs = logs.filter(l => l.date === today);
-            
-            // Update Total
-            const total = todayLogs.reduce((sum, l) => sum + l.amount, 0);
-            document.getElementById('total-count').innerText = total;
-
-            // Update Log
-            const logContainer = document.getElementById('log');
-            logContainer.innerHTML = todayLogs.reverse().map(l => `
-                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
-                    <span class="text-slate-300">${l.time}</span>
-                    <span class="font-mono font-bold text-blue-400">+${l.amount}</span>
-                </div>
-            `).join('');
-
-            // Update Chart
-            const hourlyData = Array(24).fill(0);
-            todayLogs.forEach(l => hourlyData[l.hour] += l.amount);
-            chart.data.datasets[0].data = hourlyData;
-            chart.update();
-        }
-
-        function clearData() {
-            if(confirm('Очистить историю за сегодня?')) {
-                logs = logs.filter(l => l.date !== new Date().toLocaleDateString());
-                save();
-                updateUI();
-            }
+    updateUI();
+}
         }
 
         initChart();
