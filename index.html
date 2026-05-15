@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Tracker Pro</title>
+    <title>Daily Tracker Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -11,7 +11,6 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
-        /* Кастомный скроллбар для лога */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -19,44 +18,49 @@
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-2xl mx-auto">
+        <div id="sync-status" class="h-4 mb-4 text-xs font-bold uppercase tracking-widest text-center text-emerald-400 transition-opacity duration-300 opacity-0">
+            Синхронизация с базой...
+        </div>
+
         <div class="flex justify-between items-center mb-8">
-            <div>
-                <p class="text-slate-400 text-sm uppercase tracking-widest font-bold">Отчет за</p>
-                <h1 id="current-date-title" class="text-2xl font-bold tracking-tight text-white underline decoration-slate-500">...</h1>
-            </div>
-            <div class="flex gap-4">
-                <div class="text-right bg-blue-500/10 px-4 py-2 rounded-2xl border border-blue-500/20">
-                    <div class="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Забрано</div>
-                    <div id="total-in" class="text-3xl font-black text-blue-400 leading-none">0</div>
+            <div class="flex items-center gap-3 md:gap-5">
+                <button onclick="changeDay(-1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 hover:text-white transition-colors shadow-lg" title="Предыдущий день">◀</button>
+                <div class="text-center min-w-[140px]">
+                    <p onclick="goToToday()" class="text-slate-400 text-[10px] uppercase tracking-widest font-bold cursor-pointer hover:text-blue-400 transition-colors" title="Вернуться к сегодня">Отчет за</p>
+                    <h1 id="current-date-title" class="text-lg md:text-xl font-bold tracking-tight text-white whitespace-nowrap">...</h1>
                 </div>
-                <div class="text-right bg-red-500/10 px-4 py-2 rounded-2xl border border-red-500/20">
-                    <div class="text-[10px] uppercase tracking-wider text-red-400 font-bold">Отправка</div>
-                    <div id="total-out" class="text-3xl font-black text-red-400 leading-none">0</div>
+                <button onclick="changeDay(1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 hover:text-white transition-colors shadow-lg" title="Следующий день">▶</button>
+            </div>
+            
+            <div class="flex gap-2 md:gap-4">
+                <div class="text-right bg-blue-500/10 px-3 py-2 rounded-2xl border border-blue-500/20">
+                    <div class="text-[9px] md:text-[10px] uppercase tracking-wider text-blue-400 font-bold">Забрано</div>
+                    <div id="total-in" class="text-2xl md:text-3xl font-black text-blue-400 leading-none">0</div>
+                </div>
+                <div class="text-right bg-red-500/10 px-3 py-2 rounded-2xl border border-red-500/20">
+                    <div class="text-[9px] md:text-[10px] uppercase tracking-wider text-red-400 font-bold">Отправка</div>
+                    <div id="total-out" class="text-2xl md:text-3xl font-black text-red-400 leading-none">0</div>
                 </div>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500">
-            <div class="flex gap-4">
+        <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500 relative overflow-hidden">
+            <div class="flex gap-4 relative z-10">
                 <input type="number" id="qty-in" placeholder="Сколько ЗАБРАЛ?" autocomplete="off"
                     class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-blue-500 outline-none text-lg text-white placeholder:text-slate-500">
-                <button id="btn-in" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">
-                    OK
-                </button>
+                <button id="btn-in" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">OK</button>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500">
-            <div class="flex gap-4">
+        <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500 relative overflow-hidden">
+            <div class="flex gap-4 relative z-10">
                 <input type="number" id="qty-out" placeholder="Товар на ОТПРАВКУ?" autocomplete="off"
                     class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-red-500 outline-none text-lg text-white placeholder:text-slate-500">
-                <button id="btn-out" class="bg-red-600 hover:bg-red-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-red-500/20">
-                    OK
-                </button>
+                <button id="btn-out" class="bg-red-600 hover:bg-red-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-red-500/20">OK</button>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8">
+        <div class="glass rounded-2xl p-6 mb-8 relative">
             <canvas id="activityChart"></canvas>
         </div>
 
@@ -69,16 +73,62 @@
         </div>
         
         <div class="flex gap-4 justify-center">
-            <button onclick="clearData()" class="text-slate-600 text-xs hover:text-red-500 transition-colors uppercase tracking-widest font-bold">Очистить данные за сегодня</button>
+            <button onclick="clearSelectedDayData()" class="text-slate-600 text-xs hover:text-red-500 transition-colors uppercase tracking-widest font-bold">Очистить данные за этот день</button>
         </div>
     </div>
 
     <script>
-        let logs = JSON.parse(localStorage.getItem('dailyLogs')) || [];
+        // Твоя ссылка на Google Apps Script (Бэкенд)
+        const DB_URL = 'https://script.google.com/macros/s/AKfycbwBgZJrB6DyUlAHxw78syW1i2tL3JHphW9k0gomW7NoMaGnpQq5iJ5Suaj0vWOJ-xRm/exec';
+        
+        let logs = [];
         let chart;
+        let selectedDate = new Date();
+        let syncCounter = 0;
 
-        const todayStr = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-        document.getElementById('current-date-title').innerText = todayStr;
+        function getSelectedDateString() {
+            return selectedDate.toLocaleDateString('ru-RU');
+        }
+
+        function setSyncStatus(isSyncing) {
+            const el = document.getElementById('sync-status');
+            if (isSyncing) {
+                syncCounter++;
+                el.classList.remove('opacity-0');
+                el.classList.add('animate-pulse');
+            } else {
+                syncCounter--;
+                if (syncCounter <= 0) {
+                    syncCounter = 0;
+                    el.classList.remove('animate-pulse');
+                    el.classList.add('opacity-0');
+                }
+            }
+        }
+
+        // Загрузка данных из Google Sheets при старте
+        async function loadDataFromDB() {
+            setSyncStatus(true);
+            try {
+                const response = await fetch(DB_URL);
+                logs = await response.json();
+                updateUI();
+            } catch (error) {
+                console.error('Ошибка загрузки базы:', error);
+                alert('Не удалось подключиться к базе данных Google.');
+            }
+            setSyncStatus(false);
+        }
+
+        function changeDay(offset) {
+            selectedDate.setDate(selectedDate.getDate() + offset);
+            updateUI();
+        }
+
+        function goToToday() {
+            selectedDate = new Date();
+            updateUI();
+        }
 
         function initChart() {
             const ctx = document.getElementById('activityChart').getContext('2d');
@@ -88,45 +138,24 @@
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
                     datasets: [
                         {
-                            label: 'Забрано',
-                            data: Array(24).fill(0),
-                            borderColor: '#3b82f6', // blue-500
-                            borderWidth: 3,
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#3b82f6'
+                            label: 'Забрано', data: Array(24).fill(0),
+                            borderColor: '#3b82f6', borderWidth: 3, backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#3b82f6'
                         },
                         {
-                            label: 'Отправка',
-                            data: Array(24).fill(0),
-                            borderColor: '#ef4444', // red-500
-                            borderWidth: 3,
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#ef4444'
+                            label: 'Отправка', data: Array(24).fill(0),
+                            borderColor: '#ef4444', borderWidth: 3, backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#ef4444'
                         }
                     ]
                 },
                 options: { 
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }, 
-                        x: { grid: { display: false }, ticks: { color: '#64748b' } } 
-                    },
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleColor: '#fff', padding: 10 }
-                    }
+                    responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false },
+                    scales: { y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b', precision: 0 } }, x: { grid: { display: false }, ticks: { color: '#64748b' } } },
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleColor: '#fff', padding: 10 } }
                 }
             });
 
-            // Обработчики кнопок
             document.getElementById('btn-in').onclick = () => addData('in');
             document.getElementById('qty-in').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addData('in'); } };
             
@@ -134,82 +163,108 @@
             document.getElementById('qty-out').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addData('out'); } };
 
             updateUI();
+            
+            // Стартуем стягивание базы
+            loadDataFromDB();
         }
 
-        function addData(type) {
+        async function addData(type) {
             const inputId = type === 'in' ? 'qty-in' : 'qty-out';
             const input = document.getElementById(inputId);
             const val = input.value.trim();
             const qty = parseInt(val);
-            
             if (isNaN(qty) || qty <= 0) return;
 
             const now = new Date();
             const entry = {
-                id: Date.now(),
-                type: type, // 'in' или 'out'
+                action: 'add',
+                id: Date.now().toString(), // Текстовый ID надежнее
+                type: type,
                 amount: qty,
                 time: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
                 hour: now.getHours(),
-                date: now.toLocaleDateString('ru-RU')
+                date: getSelectedDateString()
             };
 
+            // 1. Оптимистичное добавление в интерфейс (работает мгновенно)
             logs.push(entry);
-            localStorage.setItem('dailyLogs', JSON.stringify(logs));
             input.value = '';
             updateUI();
+
+            // 2. Отправка в бэкенд Google
+            setSyncStatus(true);
+            try {
+                await fetch(DB_URL, { method: 'POST', body: JSON.stringify(entry) });
+            } catch (error) {
+                console.error("Ошибка при сохранении:", error);
+            }
+            setSyncStatus(false);
         }
 
-        function deleteEntry(id) {
-            logs = logs.filter(l => l.id !== id);
-            localStorage.setItem('dailyLogs', JSON.stringify(logs));
+        async function deleteEntry(id) {
+            // 1. Оптимистичное удаление из интерфейса
+            logs = logs.filter(l => l.id != id);
             updateUI();
+
+            // 2. Команда на удаление в бэкенд
+            setSyncStatus(true);
+            try {
+                await fetch(DB_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
+            } catch (error) {
+                console.error("Ошибка при удалении:", error);
+            }
+            setSyncStatus(false);
         }
 
         function updateUI() {
-            const today = new Date().toLocaleDateString('ru-RU');
-            const todayLogs = logs.filter(l => l.date === today);
+            const targetDateStr = getSelectedDateString();
+            const isToday = targetDateStr === new Date().toLocaleDateString('ru-RU');
             
-            // Подсчет сумм
-            const totalIn = todayLogs.filter(l => l.type === 'in').reduce((sum, l) => sum + l.amount, 0);
-            const totalOut = todayLogs.filter(l => l.type === 'out').reduce((sum, l) => sum + l.amount, 0);
+            let titleText = selectedDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+            if (isToday) titleText += ' (Сегодня)';
+            document.getElementById('current-date-title').innerText = titleText;
+            
+            document.getElementById('current-date-title').className = isToday 
+                ? "text-lg md:text-xl font-bold tracking-tight text-white whitespace-nowrap"
+                : "text-lg md:text-xl font-bold tracking-tight text-amber-400 whitespace-nowrap";
+
+            const targetLogs = logs.filter(l => l.date === targetDateStr);
+            
+            const totalIn = targetLogs.filter(l => l.type === 'in' || !l.type).reduce((sum, l) => sum + l.amount, 0);
+            const totalOut = targetLogs.filter(l => l.type === 'out').reduce((sum, l) => sum + l.amount, 0);
             
             document.getElementById('total-in').innerText = totalIn;
             document.getElementById('total-out').innerText = totalOut;
 
-            // Отрисовка лога
             const logContainer = document.getElementById('log');
-            if (todayLogs.length === 0) {
-                logContainer.innerHTML = '<p class="text-slate-600 text-center text-sm py-4">Тишина. Записей нет.</p>';
+            if (targetLogs.length === 0) {
+                logContainer.innerHTML = '<p class="text-slate-600 text-center text-sm py-4">В этот день записей нет.</p>';
             } else {
-                logContainer.innerHTML = [...todayLogs].reverse().map(l => {
+                logContainer.innerHTML = [...targetLogs].reverse().map(l => {
                     const isOut = l.type === 'out';
                     const colorClass = isOut ? 'text-red-400' : 'text-blue-400';
                     const bgClass = isOut ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20';
                     const label = isOut ? 'Отправка' : 'Забрал';
                     
                     return `
-                    <div class="flex justify-between items-center border border-slate-700/50 ${bgClass} rounded-lg p-3 group">
+                    <div class="flex justify-between items-center border border-slate-700/50 ${bgClass} rounded-lg p-3 group transition-all hover:bg-slate-800/50">
                         <div class="flex items-center gap-4">
                             <span class="text-slate-400 text-sm font-mono">${l.time}</span>
                             <span class="text-xs uppercase tracking-wider font-bold ${colorClass} opacity-70">${label}</span>
                         </div>
                         <div class="flex items-center gap-4">
                             <span class="font-black text-lg ${colorClass}">+${l.amount}</span>
-                            <button onclick="deleteEntry(${l.id})" class="text-slate-600 hover:text-red-500 transition-colors px-2 py-1 bg-slate-800 rounded opacity-0 group-hover:opacity-100 focus:opacity-100" title="Удалить запись">
-                                ✕
-                            </button>
+                            <button onclick="deleteEntry('${l.id}')" class="text-slate-600 hover:text-red-500 transition-colors px-2 py-1 bg-slate-900 rounded opacity-0 group-hover:opacity-100 focus:opacity-100" title="Удалить">✕</button>
                         </div>
                     </div>
                 `}).join('');
             }
 
-            // Обновление графика
             const hourlyIn = Array(24).fill(0);
             const hourlyOut = Array(24).fill(0);
             
-            todayLogs.forEach(l => {
-                if (l.type === 'in') hourlyIn[l.hour] += l.amount;
+            targetLogs.forEach(l => {
+                if (l.type === 'in' || !l.type) hourlyIn[l.hour] += l.amount;
                 if (l.type === 'out') hourlyOut[l.hour] += l.amount;
             });
             
@@ -218,35 +273,48 @@
             chart.update();
         }
 
+        async function clearSelectedDayData() {
+            if(!confirm('Точно удалить все записи за ВЫБРАННЫЙ день? Это сотрет их и из облака.')) return;
+            const targetDateStr = getSelectedDateString();
+            const targetLogs = logs.filter(l => l.date === targetDateStr);
+            
+            // Удаляем визуально сразу
+            logs = logs.filter(l => l.date !== targetDateStr);
+            updateUI();
+
+            // Удаляем в базе поштучно (чтобы не сломать скрипт гугла множественными запросами)
+            setSyncStatus(true);
+            for (let l of targetLogs) {
+                try {
+                    await fetch(DB_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: l.id }) });
+                } catch(e) {
+                    console.error("Ошибка при пакетном удалении:", e);
+                }
+            }
+            setSyncStatus(false);
+        }
+
         function downloadCSV() {
-            const today = new Date().toLocaleDateString('ru-RU');
-            const todayLogs = logs.filter(l => l.date === today);
-            if (todayLogs.length === 0) return alert('Нечего выгружать.');
+            const targetDateStr = getSelectedDateString();
+            const targetLogs = logs.filter(l => l.date === targetDateStr);
+            if (targetLogs.length === 0) return alert('В этот день нечего выгружать.');
             
             let csv = "\uFEFFДата,Время,Тип операции,Количество\n";
-            todayLogs.forEach(l => { 
-                const typeStr = l.type === 'in' ? 'Забрано' : 'Отправка';
+            targetLogs.forEach(l => { 
+                const typeStr = l.type === 'out' ? 'Отправка' : 'Забрано';
                 csv += `${l.date},${l.time},${typeStr},${l.amount}\n`; 
             });
             
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `otchet_${today}.csv`);
+            link.setAttribute("download", `otchet_${targetDateStr}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        function clearData() {
-            if(confirm('Снести всё за сегодня? Действие необратимо.')) {
-                const today = new Date().toLocaleDateString('ru-RU');
-                logs = logs.filter(l => l.date !== today);
-                localStorage.setItem('dailyLogs', JSON.stringify(logs));
-                updateUI();
-            }
-        }
-
+        // Запуск
         initChart();
     </script>
 </body>
