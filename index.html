@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold tracking-tight">Отчет за сегодня</h1>
+            <div id="total-count" class="text-4xl font-black text-blue-400">0</div>
+        </div>
+
+        <div class="glass rounded-2xl p-6 mb-8">
+            <div class="flex gap-4">
+                <input type="number" id="quantity" placeholder="Сколько забрал?" 
+                    class="bg-slate-800 border-none rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-blue-500 outline-none text-lg">
+                <button onclick="addData()" class="bg-blue-600 hover:bg-blue-500 transition-colors px-8 py-3 rounded-xl font-bold">
+                    +
+                </button>
+            </div>
+        </div>
+
+        <div class="glass rounded-2xl p-6 mb-8">
+            <canvas id="activityChart"></canvas>
+        </div>
+
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-slate-400 mb-4 uppercase text-xs font-bold tracking-widest">Лог событий</h3>
+            <div id="log" class="space-y-3 max-h-60 overflow-y-auto"></div>
+        </div>
+        
+        <button onclick="clearData()" class="mt-8 text-slate-500 text-sm hover:text-red-400 transition-colors">
+            Сбросить данные дня
+        </button>
+    </div>
+
+    <script>
+        let logs = JSON.parse(localStorage.getItem('dailyLogs')) || [];
+        let chart;
+
+        function initChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [{
+                        label: 'Забрано товара',
+                        data: Array(24).fill(0),
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, grid: { color: '#334155' } }, x: { grid: { display: false } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+            updateUI();
+        }
+
+        function addData() {
+            const qty = document.getElementById('quantity').value;
+            if (!qty) return;
+
+            const entry = {
+                id: Date.now(),
+                amount: parseInt(qty),
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                hour: new Date().getHours(),
+                date: new Date().toLocaleDateString()
+            };
+
+            logs.push(entry);
+            save();
+            document.getElementById('quantity').value = '';
+            updateUI();
+        }
+
+        function save() {
+            localStorage.setItem('dailyLogs', JSON.stringify(logs));
+        }
+
+        function updateUI() {
+            const today = new Date().toLocaleDateString();
+            const todayLogs = logs.filter(l => l.date === today);
+            
+            // Update Total
+            const total = todayLogs.reduce((sum, l) => sum + l.amount, 0);
+            document.getElementById('total-count').innerText = total;
+
+            // Update Log
+            const logContainer = document.getElementById('log');
+            logContainer.innerHTML = todayLogs.reverse().map(l => `
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span class="text-slate-300">${l.time}</span>
+                    <span class="font-mono font-bold text-blue-400">+${l.amount}</span>
+                </div>
+            `).join('');
+
+            // Update Chart
+            const hourlyData = Array(24).fill(0);
+            todayLogs.forEach(l => hourlyData[l.hour] += l.amount);
+            chart.data.datasets[0].data = hourlyData;
+            chart.update();
+        }
+
+        function clearData() {
+            if(confirm('Очистить историю за сегодня?')) {
+                logs = logs.filter(l => l.date !== new Date().toLocaleDateString());
+                save();
+                updateUI();
+            }
+        }
+
+        initChart();
+    </script>
+</body>
+</html>
