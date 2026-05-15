@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Tracker</title>
+    <title>Daily Tracker Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -11,6 +11,10 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
+        /* Кастомный скроллбар для лога */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -18,16 +22,35 @@
         <div class="flex justify-between items-center mb-8">
             <div>
                 <p class="text-slate-400 text-sm uppercase tracking-widest font-bold">Отчет за</p>
-                <h1 id="current-date-title" class="text-2xl font-bold tracking-tight text-white underline decoration-blue-500">...</h1>
+                <h1 id="current-date-title" class="text-2xl font-bold tracking-tight text-white underline decoration-slate-500">...</h1>
             </div>
-            <div id="total-count" class="text-4xl font-black text-blue-400 bg-blue-400/10 px-4 py-2 rounded-2xl">0</div>
+            <div class="flex gap-4">
+                <div class="text-right bg-blue-500/10 px-4 py-2 rounded-2xl border border-blue-500/20">
+                    <div class="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Забрано</div>
+                    <div id="total-in" class="text-3xl font-black text-blue-400 leading-none">0</div>
+                </div>
+                <div class="text-right bg-red-500/10 px-4 py-2 rounded-2xl border border-red-500/20">
+                    <div class="text-[10px] uppercase tracking-wider text-red-400 font-bold">Отправка</div>
+                    <div id="total-out" class="text-3xl font-black text-red-400 leading-none">0</div>
+                </div>
+            </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8">
+        <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500">
             <div class="flex gap-4">
-                <input type="number" id="quantity" placeholder="Введите число..." autocomplete="off"
-                    class="bg-slate-800 border-none rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-blue-500 outline-none text-lg text-white">
-                <button id="add-btn" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">
+                <input type="number" id="qty-in" placeholder="Сколько ЗАБРАЛ?" autocomplete="off"
+                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-blue-500 outline-none text-lg text-white placeholder:text-slate-500">
+                <button id="btn-in" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">
+                    OK
+                </button>
+            </div>
+        </div>
+
+        <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500">
+            <div class="flex gap-4">
+                <input type="number" id="qty-out" placeholder="Товар на ОТПРАВКУ?" autocomplete="off"
+                    class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-red-500 outline-none text-lg text-white placeholder:text-slate-500">
+                <button id="btn-out" class="bg-red-600 hover:bg-red-500 active:scale-95 transition-all px-8 py-3 rounded-xl font-bold shadow-lg shadow-red-500/20">
                     OK
                 </button>
             </div>
@@ -40,13 +63,13 @@
         <div class="glass rounded-2xl p-6 mb-6">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-slate-400 uppercase text-xs font-bold tracking-widest">Лог событий</h3>
-                <button onclick="downloadCSV()" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Экспорт в CSV</button>
+                <button onclick="downloadCSV()" class="text-xs text-slate-400 hover:text-white font-medium bg-slate-800 px-3 py-1 rounded-md transition-colors">Экспорт в CSV</button>
             </div>
-            <div id="log" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
+            <div id="log" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
         </div>
         
         <div class="flex gap-4 justify-center">
-            <button onclick="clearData()" class="text-slate-500 text-xs hover:text-red-400 transition-colors uppercase tracking-widest">Очистить данные за сегодня</button>
+            <button onclick="clearData()" class="text-slate-600 text-xs hover:text-red-500 transition-colors uppercase tracking-widest font-bold">Очистить данные за сегодня</button>
         </div>
     </div>
 
@@ -54,12 +77,7 @@
         let logs = JSON.parse(localStorage.getItem('dailyLogs')) || [];
         let chart;
 
-        // ПОЛНАЯ ДАТА: Число, месяц (словом), год
-        const todayStr = new Date().toLocaleDateString('ru-RU', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
-        });
+        const todayStr = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
         document.getElementById('current-date-title').innerText = todayStr;
 
         function initChart() {
@@ -68,43 +86,59 @@
                 type: 'line',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [{
-                        label: 'Количество',
-                        data: Array(24).fill(0),
-                        borderColor: '#60a5fa',
-                        borderWidth: 3,
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#60a5fa'
-                    }]
+                    datasets: [
+                        {
+                            label: 'Забрано',
+                            data: Array(24).fill(0),
+                            borderColor: '#3b82f6', // blue-500
+                            borderWidth: 3,
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: 'Отправка',
+                            data: Array(24).fill(0),
+                            borderColor: '#ef4444', // red-500
+                            borderWidth: 3,
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#ef4444'
+                        }
+                    ]
                 },
                 options: { 
                     responsive: true,
                     maintainAspectRatio: true,
+                    interaction: { mode: 'index', intersect: false },
                     scales: { 
                         y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }, 
                         x: { grid: { display: false }, ticks: { color: '#64748b' } } 
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleColor: '#fff', padding: 10 }
+                    }
                 }
             });
 
-            // Исправленный ввод по клику и Enter
-            document.getElementById('add-btn').onclick = addData;
-            document.getElementById('quantity').onkeydown = (e) => { 
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addData(); 
-                }
-            };
+            // Обработчики кнопок
+            document.getElementById('btn-in').onclick = () => addData('in');
+            document.getElementById('qty-in').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addData('in'); } };
+            
+            document.getElementById('btn-out').onclick = () => addData('out');
+            document.getElementById('qty-out').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addData('out'); } };
 
             updateUI();
         }
 
-        function addData() {
-            const input = document.getElementById('quantity');
+        function addData(type) {
+            const inputId = type === 'in' ? 'qty-in' : 'qty-out';
+            const input = document.getElementById(inputId);
             const val = input.value.trim();
             const qty = parseInt(val);
             
@@ -113,6 +147,7 @@
             const now = new Date();
             const entry = {
                 id: Date.now(),
+                type: type, // 'in' или 'out'
                 amount: qty,
                 time: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
                 hour: now.getHours(),
@@ -125,38 +160,74 @@
             updateUI();
         }
 
+        function deleteEntry(id) {
+            logs = logs.filter(l => l.id !== id);
+            localStorage.setItem('dailyLogs', JSON.stringify(logs));
+            updateUI();
+        }
+
         function updateUI() {
             const today = new Date().toLocaleDateString('ru-RU');
             const todayLogs = logs.filter(l => l.date === today);
             
-            const total = todayLogs.reduce((sum, l) => sum + l.amount, 0);
-            document.getElementById('total-count').innerText = total;
+            // Подсчет сумм
+            const totalIn = todayLogs.filter(l => l.type === 'in').reduce((sum, l) => sum + l.amount, 0);
+            const totalOut = todayLogs.filter(l => l.type === 'out').reduce((sum, l) => sum + l.amount, 0);
+            
+            document.getElementById('total-in').innerText = totalIn;
+            document.getElementById('total-out').innerText = totalOut;
 
+            // Отрисовка лога
             const logContainer = document.getElementById('log');
             if (todayLogs.length === 0) {
-                logContainer.innerHTML = '<p class="text-slate-600 text-center text-sm py-4">Сегодня записей еще нет</p>';
+                logContainer.innerHTML = '<p class="text-slate-600 text-center text-sm py-4">Тишина. Записей нет.</p>';
             } else {
-                logContainer.innerHTML = [...todayLogs].reverse().map(l => `
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="text-slate-400 text-sm">${l.time}</span>
-                        <span class="font-bold text-blue-400">+${l.amount}</span>
+                logContainer.innerHTML = [...todayLogs].reverse().map(l => {
+                    const isOut = l.type === 'out';
+                    const colorClass = isOut ? 'text-red-400' : 'text-blue-400';
+                    const bgClass = isOut ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20';
+                    const label = isOut ? 'Отправка' : 'Забрал';
+                    
+                    return `
+                    <div class="flex justify-between items-center border border-slate-700/50 ${bgClass} rounded-lg p-3 group">
+                        <div class="flex items-center gap-4">
+                            <span class="text-slate-400 text-sm font-mono">${l.time}</span>
+                            <span class="text-xs uppercase tracking-wider font-bold ${colorClass} opacity-70">${label}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="font-black text-lg ${colorClass}">+${l.amount}</span>
+                            <button onclick="deleteEntry(${l.id})" class="text-slate-600 hover:text-red-500 transition-colors px-2 py-1 bg-slate-800 rounded opacity-0 group-hover:opacity-100 focus:opacity-100" title="Удалить запись">
+                                ✕
+                            </button>
+                        </div>
                     </div>
-                `).join('');
+                `}).join('');
             }
 
-            const hourlyData = Array(24).fill(0);
-            todayLogs.forEach(l => hourlyData[l.hour] += l.amount);
-            chart.data.datasets[0].data = hourlyData;
+            // Обновление графика
+            const hourlyIn = Array(24).fill(0);
+            const hourlyOut = Array(24).fill(0);
+            
+            todayLogs.forEach(l => {
+                if (l.type === 'in') hourlyIn[l.hour] += l.amount;
+                if (l.type === 'out') hourlyOut[l.hour] += l.amount;
+            });
+            
+            chart.data.datasets[0].data = hourlyIn;
+            chart.data.datasets[1].data = hourlyOut;
             chart.update();
         }
 
         function downloadCSV() {
             const today = new Date().toLocaleDateString('ru-RU');
             const todayLogs = logs.filter(l => l.date === today);
-            if (todayLogs.length === 0) return alert('Нет данных для экспорта');
+            if (todayLogs.length === 0) return alert('Нечего выгружать.');
             
-            let csv = "\uFEFFДата,Время,Количество\n";
-            todayLogs.forEach(l => { csv += `${l.date},${l.time},${l.amount}\n`; });
+            let csv = "\uFEFFДата,Время,Тип операции,Количество\n";
+            todayLogs.forEach(l => { 
+                const typeStr = l.type === 'in' ? 'Забрано' : 'Отправка';
+                csv += `${l.date},${l.time},${typeStr},${l.amount}\n`; 
+            });
             
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
@@ -168,7 +239,7 @@
         }
 
         function clearData() {
-            if(confirm('Вы уверены, что хотите удалить все записи за сегодня?')) {
+            if(confirm('Снести всё за сегодня? Действие необратимо.')) {
                 const today = new Date().toLocaleDateString('ru-RU');
                 logs = logs.filter(l => l.date !== today);
                 localStorage.setItem('dailyLogs', JSON.stringify(logs));
