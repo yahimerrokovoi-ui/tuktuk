@@ -3,78 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Tracker Cloud (Supabase)</title>
+    <title>Tracker | Новые & Поверка</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        body { 
+            background-color: #09090b; /* Deep zinc-950 */
+            color: #f4f4f5; 
+            font-family: 'Inter', sans-serif; 
+            -webkit-font-smoothing: antialiased;
+        }
+        .bento-card { 
+            background: rgba(24, 24, 27, 0.4); /* zinc-900/40 */
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255,255,255,0.05); 
+            border-radius: 24px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+        
+        /* Subtle glow effects for modern inputs */
+        .input-glow-blue:focus-within { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); }
+        .input-glow-rose:focus-within { box-shadow: 0 0 20px rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 selection:bg-blue-500/30">
     <div class="max-w-2xl mx-auto">
-        <div id="sync-status" class="h-4 mb-4 text-xs font-bold uppercase tracking-widest text-center text-emerald-400 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div id="sync-status" class="h-4 mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-center text-zinc-500 transition-opacity duration-300 opacity-0 pointer-events-none">
             Синхронизация...
         </div>
 
-        <div class="flex justify-between items-center mb-8">
-            <div class="flex items-center gap-3">
-                <button onclick="changeDay(-1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 cursor-pointer">◀</button>
-                <div class="text-center min-w-[140px]">
-                    <p onclick="goToToday()" class="text-slate-400 text-[10px] uppercase tracking-widest font-bold cursor-pointer">Отчет за</p>
-                    <h1 id="current-date-title" class="text-lg font-bold text-white whitespace-nowrap">...</h1>
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 relative z-10">
+            <div class="flex items-center gap-4">
+                <button onclick="changeDay(-1)" class="w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer">◀</button>
+                <div class="text-center min-w-[150px]">
+                    <p onclick="goToToday()" class="text-zinc-500 text-[10px] uppercase tracking-widest font-semibold cursor-pointer hover:text-zinc-300 transition-colors">Отчет за</p>
+                    <h1 id="current-date-title" class="text-xl font-bold text-white whitespace-nowrap tracking-tight">...</h1>
                 </div>
-                <button onclick="changeDay(1)" class="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 text-slate-400 cursor-pointer">▶</button>
+                <button onclick="changeDay(1)" class="w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer">▶</button>
             </div>
             
-            <div class="flex gap-2">
-                <div class="text-right bg-blue-500/10 px-3 py-2 rounded-2xl border border-blue-500/20">
-                    <div class="text-[9px] uppercase text-blue-400 font-bold">Забрано</div>
-                    <div id="total-in" class="text-2xl font-black text-blue-400">0</div>
+            <div class="flex gap-3 w-full md:w-auto">
+                <div class="flex-1 md:flex-none text-right bg-zinc-900/50 px-5 py-3 rounded-2xl border border-zinc-800/80 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-blue-500/5"></div>
+                    <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold relative z-10">Новые</div>
+                    <div id="total-in" class="text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-sm font-medium text-zinc-500">шт.</span></div>
                 </div>
-                <div class="text-right bg-red-500/10 px-3 py-2 rounded-2xl border border-red-500/20">
-                    <div class="text-[9px] uppercase text-red-400 font-bold">Отправка</div>
-                    <div id="total-out" class="text-2xl font-black text-red-400">0</div>
+                <div class="flex-1 md:flex-none text-right bg-zinc-900/50 px-5 py-3 rounded-2xl border border-zinc-800/80 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-rose-500/5"></div>
+                    <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold relative z-10">Поверка</div>
+                    <div id="total-out" class="text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-sm font-medium text-zinc-500">шт.</span></div>
                 </div>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-4 border-l-4 border-l-blue-500">
-            <div class="flex gap-4">
-                <input type="number" id="qty-in" placeholder="Сколько ЗАБРАЛ?" 
-                    class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white focus:ring-2 focus:ring-blue-500">
-                <button id="btn-in" class="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold cursor-pointer transition-colors">OK</button>
+        <!-- Input (Новые) -->
+        <div class="bento-card p-2 pl-6 mb-5 flex gap-4 relative z-20 items-center input-glow-blue transition-all border border-zinc-800">
+            <input type="number" id="qty-in" placeholder="Сколько новых?" 
+                class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
+            <button id="btn-in" class="bg-white text-black hover:bg-zinc-200 px-8 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                Добавить
+            </button>
+        </div>
+
+        <!-- Input (Поверка) -->
+        <div class="bento-card p-2 pl-6 mb-10 flex gap-4 relative z-20 items-center input-glow-rose transition-all border border-zinc-800">
+            <input type="number" id="qty-out" placeholder="Сколько на поверку?" 
+                class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
+            <button id="btn-out" class="bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 px-8 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap">
+                Списать
+            </button>
+        </div>
+
+        <!-- Chart Carousel -->
+        <div class="bento-card p-6 mb-6 relative z-10">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="chart-title-text" class="text-zinc-400 uppercase text-[10px] font-bold tracking-[0.2em]">Активность за день (часы)</h3>
+                <div class="flex gap-2">
+                    <button onclick="changeChart(-1)" class="w-6 h-6 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer">◀</button>
+                    <button onclick="changeChart(1)" class="w-6 h-6 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer">▶</button>
+                </div>
+            </div>
+            
+            <div class="relative h-[250px] md:h-[300px] w-full flex justify-center">
+                <canvas id="activityChart1" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-10 opacity-100"></canvas>
+                <canvas id="activityChart2" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-0 opacity-0 pointer-events-none"></canvas>
+                <canvas id="activityChart3" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-0 opacity-0 pointer-events-none"></canvas>
+            </div>
+
+            <!-- Dots -->
+            <div class="flex justify-center gap-2 mt-4">
+                <div id="dot0" class="w-2 h-2 rounded-full bg-blue-500 transition-colors"></div>
+                <div id="dot1" class="w-2 h-2 rounded-full bg-zinc-700 transition-colors"></div>
+                <div id="dot2" class="w-2 h-2 rounded-full bg-zinc-700 transition-colors"></div>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8 border-l-4 border-l-red-500">
-            <div class="flex gap-4">
-                <input type="number" id="qty-out" placeholder="На ОТПРАВКУ?" 
-                    class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 w-full outline-none text-white focus:ring-2 focus:ring-red-500">
-                <button id="btn-out" class="bg-red-600 hover:bg-red-500 px-8 py-3 rounded-xl font-bold cursor-pointer transition-colors">OK</button>
+        <!-- Log -->
+        <div class="bento-card p-6 mb-8 relative z-10">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-zinc-400 uppercase text-[10px] font-bold tracking-[0.2em]">История операций</h3>
+                <button onclick="downloadCSV()" class="text-[10px] uppercase font-bold tracking-widest text-zinc-500 hover:text-white cursor-pointer transition-colors bg-zinc-800/50 px-3 py-1.5 rounded-md border border-zinc-700/50">Export CSV</button>
             </div>
+            <div id="log" class="space-y-3 max-h-64 overflow-y-auto pr-3"></div>
         </div>
 
-        <div class="glass rounded-2xl p-6 mb-8">
-            <canvas id="activityChart"></canvas>
-        </div>
-
-        <div class="glass rounded-2xl p-6 mb-6">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-slate-400 uppercase text-xs font-bold tracking-widest">Лог событий</h3>
-                <button onclick="downloadCSV()" class="text-xs text-slate-400 font-medium hover:text-white cursor-pointer">CSV</button>
-            </div>
-            <div id="log" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
-        </div>
-
-        <div class="text-center">
-            <button onclick="clearDay()" class="text-slate-600 text-[10px] uppercase font-bold hover:text-red-500 cursor-pointer">Очистить день</button>
+        <div class="text-center pb-8">
+            <button onclick="clearDay()" class="text-zinc-600 text-[10px] uppercase font-bold tracking-widest hover:text-rose-500 cursor-pointer transition-colors">Очистить историю за этот день</button>
         </div>
     </div>
 
@@ -85,8 +127,11 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let logs = [];
-        let chart;
+        let chart1, chart2, chart3;
         let selectedDate = new Date();
+        
+        let currentChartIdx = 0;
+        const chartTitles = ['Активность за день (часы)', 'Соотношение за день', 'Статистика за месяц (дни)'];
 
         function setSync(show) {
             document.getElementById('sync-status').style.opacity = show ? "1" : "0";
@@ -140,6 +185,26 @@
             setSync(false);
         }
 
+        function changeChart(dir) {
+            currentChartIdx = (currentChartIdx + dir + 3) % 3;
+            document.getElementById('chart-title-text').innerText = chartTitles[currentChartIdx];
+            
+            for (let i = 0; i < 3; i++) {
+                const canvas = document.getElementById(`activityChart${i+1}`);
+                const dot = document.getElementById(`dot${i}`);
+                
+                if (i === currentChartIdx) {
+                    canvas.classList.remove('opacity-0', 'pointer-events-none', 'z-0');
+                    canvas.classList.add('opacity-100', 'z-10');
+                    dot.classList.replace('bg-zinc-700', 'bg-blue-500');
+                } else {
+                    canvas.classList.remove('opacity-100', 'z-10');
+                    canvas.classList.add('opacity-0', 'pointer-events-none', 'z-0');
+                    dot.classList.replace('bg-blue-500', 'bg-zinc-700');
+                }
+            }
+        }
+
         function updateUI() {
             const dateStr = selectedDate.toLocaleDateString('ru-RU');
             const isToday = dateStr === new Date().toLocaleDateString('ru-RU');
@@ -150,24 +215,61 @@
             const sumIn = filtered.filter(l => l.type === 'in').reduce((a,b) => a + b.amount, 0);
             const sumOut = filtered.filter(l => l.type === 'out').reduce((a,b) => a + b.amount, 0);
             
-            document.getElementById('total-in').innerText = sumIn;
-            document.getElementById('total-out').innerText = sumOut;
+            document.getElementById('total-in').innerHTML = `${sumIn} <span class="text-sm font-medium text-zinc-500">шт.</span>`;
+            document.getElementById('total-out').innerHTML = `${sumOut} <span class="text-sm font-medium text-zinc-500">шт.</span>`;
 
             const logEl = document.getElementById('log');
-            logEl.innerHTML = filtered.length ? [...filtered].reverse().map(l => `
-                <div class="flex justify-between items-center p-3 rounded-lg border border-slate-800 ${l.type === 'out' ? 'bg-red-500/5' : 'bg-blue-500/5'}">
-                    <span class="text-xs text-slate-500">${l.time}</span>
-                    <span class="font-bold ${l.type === 'out' ? 'text-red-400' : 'text-blue-400'}">+${l.amount}</span>
-                    <button onclick="remove('${l.id}')" class="text-slate-700 hover:text-red-500 cursor-pointer p-2">✕</button>
+            logEl.innerHTML = filtered.length ? [...filtered].reverse().map(l => {
+                const isOut = l.type === 'out';
+                const textColor = isOut ? 'text-white' : 'text-white';
+                const labelColor = isOut ? 'text-rose-400' : 'text-blue-400';
+                const label = isOut ? 'Поверка' : 'Новые';
+                
+                return `
+                <div class="flex justify-between items-center px-4 py-3 rounded-xl border border-zinc-800/60 bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors group">
+                    <div class="flex items-center gap-4">
+                        <span class="text-[11px] font-medium text-zinc-500 w-10">${l.time}</span>
+                        <span class="text-[10px] uppercase tracking-wider font-bold ${labelColor}">${label}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="font-bold text-base ${textColor}">+${l.amount} <span class="text-xs font-normal text-zinc-500">шт.</span></span>
+                        <button onclick="remove('${l.id}')" class="text-zinc-600 hover:text-rose-500 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                    </div>
                 </div>
-            `).join('') : '<p class="text-center text-slate-700 py-4">Нет записей</p>';
+            `}).join('') : '<p class="text-center text-zinc-600 text-sm py-6">Операций пока нет.</p>';
 
-            if (chart) {
+            if (chart1 && chart2 && chart3) {
+                // Обновление графика 1 (Линии по часам)
                 const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
                 filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
-                chart.data.datasets[0].data = hIn;
-                chart.data.datasets[1].data = hOut;
-                chart.update();
+                chart1.data.datasets[0].data = hIn;
+                chart1.data.datasets[1].data = hOut;
+                chart1.update();
+
+                // Обновление графика 2 (Пирог)
+                chart2.data.datasets[0].data = [sumIn, sumOut];
+                chart2.update();
+
+                // Обновление графика 3 (Столбцы по месяцу)
+                const monthYear = dateStr.substring(3); // 'MM.YYYY'
+                const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+                const monthlyLogs = logs.filter(l => l.date && l.date.endsWith(monthYear));
+                
+                const mIn = Array(daysInMonth).fill(0);
+                const mOut = Array(daysInMonth).fill(0);
+                
+                monthlyLogs.forEach(l => {
+                    const day = parseInt(l.date.substring(0, 2), 10);
+                    if (day >= 1 && day <= daysInMonth) {
+                        if (l.type === 'in') mIn[day - 1] += l.amount;
+                        if (l.type === 'out') mOut[day - 1] += l.amount;
+                    }
+                });
+
+                chart3.data.labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+                chart3.data.datasets[0].data = mIn;
+                chart3.data.datasets[1].data = mOut;
+                chart3.update();
             }
         }
 
@@ -175,24 +277,82 @@
         function goToToday() { selectedDate = new Date(); updateUI(); }
 
         function init() {
-            const ctx = document.getElementById('activityChart').getContext('2d');
-            chart = new Chart(ctx, {
+            // Настройка современного стиля графиков
+            Chart.defaults.color = '#71717a';
+            Chart.defaults.font.family = 'Inter';
+            
+            const tooltipConfig = { backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#a1a1aa', padding: 12, borderColor: '#27272a', borderWidth: 1, cornerRadius: 8 };
+
+            // График 1: Активность по часам
+            const ctx1 = document.getElementById('activityChart1').getContext('2d');
+            chart1 = new Chart(ctx1, {
                 type: 'line',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
                     datasets: [
-                        { label: 'Вход', data: [], borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
-                        { label: 'Выход', data: [], borderColor: '#ef4444', tension: 0.4, fill: true, backgroundColor: 'rgba(239, 68, 68, 0.05)' }
+                        { label: 'Новые (шт.)', data: [], borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 0, pointHoverRadius: 6, pointBackgroundColor: '#3b82f6' },
+                        { label: 'Поверка (шт.)', data: [], borderColor: '#f43f5e', borderWidth: 2, tension: 0.4, pointRadius: 0, pointHoverRadius: 6, pointBackgroundColor: '#f43f5e' }
                     ]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false }, tooltip: tooltipConfig }, 
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#27272a', drawBorder: false }, border: { dash: [4, 4] } }, 
+                        x: { grid: { display: false, drawBorder: false } } 
+                    } 
+                }
+            });
+
+            // График 2: Круговая диаграмма
+            const ctx2 = document.getElementById('activityChart2').getContext('2d');
+            chart2 = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Новые', 'Поверка'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#3b82f6', '#f43f5e'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 20, usePointStyle: true } }, 
+                        tooltip: tooltipConfig 
+                    }
+                }
+            });
+
+            // График 3: Столбцы по дням месяца
+            const ctx3 = document.getElementById('activityChart3').getContext('2d');
+            chart3 = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: [], 
+                    datasets: [
+                        { label: 'Новые (шт.)', data: [], backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: 'Поверка (шт.)', data: [], backgroundColor: '#f43f5e', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false }, tooltip: tooltipConfig }, 
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#27272a', drawBorder: false }, border: { dash: [4, 4] }, stacked: false }, 
+                        x: { grid: { display: false, drawBorder: false }, stacked: false } 
+                    }
+                }
             });
             
-            // Назначаем обработчики кликов
             document.getElementById('btn-in').onclick = () => addData('in');
             document.getElementById('btn-out').onclick = () => addData('out');
             
-            // Исправленные обработчики нажатия клавиши Enter
             document.getElementById('qty-in').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') addData('in');
             });
@@ -205,12 +365,32 @@
         }
 
         async function clearDay() {
-            if(!confirm('Удалить всё за этот день?')) return;
+            if(!confirm('Безвозвратно удалить все записи за этот день?')) return;
             const dateStr = selectedDate.toLocaleDateString('ru-RU');
             const toDelete = logs.filter(l => l.date === dateStr);
             logs = logs.filter(l => l.date !== dateStr);
             updateUI();
             for(let l of toDelete) await db.from('transactions').delete().eq('id', l.id);
+        }
+
+        function downloadCSV() {
+            const dateStr = selectedDate.toLocaleDateString('ru-RU');
+            const filtered = logs.filter(l => l.date === dateStr);
+            if (filtered.length === 0) return alert('В этот день нечего выгружать.');
+            
+            let csv = "\uFEFFДата,Время,Тип операции,Количество\n";
+            filtered.forEach(l => { 
+                const typeStr = l.type === 'out' ? 'Поверка' : 'Новые';
+                csv += `${l.date},${l.time},${typeStr},${l.amount} шт.\n`; 
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `otchet_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         window.onload = init;
