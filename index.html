@@ -10,13 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         body { 
-            background-color: #09090b; /* Deep zinc-950 */
+            background-color: #09090b; 
             color: #f4f4f5; 
             font-family: 'Inter', sans-serif; 
             -webkit-font-smoothing: antialiased;
         }
         .bento-card { 
-            background: rgba(24, 24, 27, 0.4); /* zinc-900/40 */
+            background: rgba(24, 24, 27, 0.4); 
             backdrop-filter: blur(12px); 
             border: 1px solid rgba(255,255,255,0.05); 
             border-radius: 24px;
@@ -28,20 +28,25 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
         
-        /* Subtle glow effects for modern inputs */
         .input-glow-blue:focus-within { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); }
         .input-glow-rose:focus-within { box-shadow: 0 0 20px rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); }
     </style>
 </head>
 <body class="p-4 md:p-8 selection:bg-blue-500/30">
     <div class="max-w-2xl mx-auto">
-        <div id="sync-status" class="h-4 mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-center text-zinc-500 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div id="sync-status" class="h-4 mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-center text-zinc-500 transition-opacity duration-300 opacity-0 pointer-events-none">
             Синхронизация...
         </div>
 
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 relative z-10">
-            <div class="flex items-center gap-4">
+        <!-- Tabs Navigation -->
+        <div class="flex justify-center gap-2 mb-8 relative z-20">
+            <button id="tab-btn-dash" onclick="setTab('dash')" class="px-6 py-2.5 rounded-full bg-zinc-800 text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-md">Дашборд</button>
+            <button id="tab-btn-cal" onclick="setTab('cal')" class="px-6 py-2.5 rounded-full bg-transparent border border-zinc-800/60 text-zinc-500 hover:text-white hover:bg-zinc-800/30 text-[10px] font-bold uppercase tracking-widest transition-all">Календарь</button>
+        </div>
+
+        <!-- Header Controls (Visible across both views) -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-10">
+            <div class="flex items-center gap-4 mx-auto md:mx-0">
                 <button onclick="changeDay(-1)" class="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-800/40 border border-zinc-700/50 hover:bg-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
@@ -54,7 +59,7 @@
                 </button>
             </div>
             
-            <div class="flex gap-3 w-full md:w-auto">
+            <div id="dash-balances" class="flex gap-3 w-full md:w-auto transition-opacity duration-300">
                 <div class="flex-1 md:flex-none text-right bg-zinc-900/50 px-5 py-3 rounded-2xl border border-zinc-800/80 relative overflow-hidden">
                     <div class="absolute inset-0 bg-blue-500/5"></div>
                     <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold relative z-10">Новые</div>
@@ -68,64 +73,93 @@
             </div>
         </div>
 
-        <!-- Input (Новые) -->
-        <div class="bento-card p-2 pl-6 mb-5 flex gap-4 relative z-20 items-center input-glow-blue transition-all border border-zinc-800">
-            <input type="number" id="qty-in" placeholder="Сколько новых?" 
-                class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
-            <button id="btn-in" class="bg-white text-black hover:bg-zinc-200 px-8 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                Добавить
-            </button>
-        </div>
+        <!-- ======================= -->
+        <!-- VIEW 1: DASHBOARD       -->
+        <!-- ======================= -->
+        <div id="view-dash">
+            <!-- Input (Новые) -->
+            <div class="bento-card p-2 pl-6 mb-5 flex gap-4 relative z-20 items-center input-glow-blue transition-all border border-zinc-800">
+                <input type="number" id="qty-in" placeholder="Сколько новых?" 
+                    class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
+                <button id="btn-in" class="w-[140px] bg-white text-black hover:bg-zinc-200 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    Добавить
+                </button>
+            </div>
 
-        <!-- Input (Поверка) -->
-        <div class="bento-card p-2 pl-6 mb-10 flex gap-4 relative z-20 items-center input-glow-rose transition-all border border-zinc-800">
-            <input type="number" id="qty-out" placeholder="Сколько на поверку?" 
-                class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
-            <button id="btn-out" class="bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 px-8 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap">
-                Списать
-            </button>
-        </div>
+            <!-- Input (Поверка) -->
+            <div class="bento-card p-2 pl-6 mb-10 flex gap-4 relative z-20 items-center input-glow-rose transition-all border border-zinc-800">
+                <input type="number" id="qty-out" placeholder="Сколько на поверку?" 
+                    class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
+                <button id="btn-out" class="w-[140px] bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap">
+                    Списать
+                </button>
+            </div>
 
-        <!-- Chart Carousel -->
-        <div class="bento-card p-6 mb-6 relative z-10">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="chart-title-text" class="text-zinc-400 uppercase text-[10px] font-bold tracking-[0.2em]">Активность за день (часы)</h3>
-                <div class="flex gap-2">
-                    <button onclick="changeChart(-1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800/40 border border-zinc-700/50 hover:bg-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
-                    <button onclick="changeChart(1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800/40 border border-zinc-700/50 hover:bg-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                    </button>
+            <!-- Chart Carousel -->
+            <div class="bento-card p-6 mb-6 relative z-10">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="chart-title-text" class="text-zinc-400 uppercase text-[10px] font-bold tracking-[0.2em]">Активность за день (часы)</h3>
+                    <div class="flex gap-2">
+                        <button onclick="changeChart(-1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800/40 border border-zinc-700/50 hover:bg-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <button onclick="changeChart(1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800/40 border border-zinc-700/50 hover:bg-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="relative h-[250px] md:h-[300px] w-full flex justify-center">
+                    <canvas id="activityChart1" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-10 opacity-100"></canvas>
+                    <canvas id="activityChart2" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-0 opacity-0 pointer-events-none"></canvas>
+                    <canvas id="activityChart3" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-0 opacity-0 pointer-events-none"></canvas>
+                </div>
+
+                <!-- Dots -->
+                <div class="flex justify-center gap-2 mt-4">
+                    <div id="dot0" class="w-2 h-2 rounded-full bg-blue-500 transition-colors"></div>
+                    <div id="dot1" class="w-2 h-2 rounded-full bg-zinc-700 transition-colors"></div>
+                    <div id="dot2" class="w-2 h-2 rounded-full bg-zinc-700 transition-colors"></div>
                 </div>
             </div>
-            
-            <div class="relative h-[250px] md:h-[300px] w-full flex justify-center">
-                <canvas id="activityChart1" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-10 opacity-100"></canvas>
-                <canvas id="activityChart2" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-0 opacity-0 pointer-events-none"></canvas>
-                <canvas id="activityChart3" class="absolute inset-0 w-full h-full transition-opacity duration-300 z-0 opacity-0 pointer-events-none"></canvas>
+
+            <!-- Log -->
+            <div class="bento-card p-6 mb-8 relative z-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-zinc-400 uppercase text-[10px] font-bold tracking-[0.2em]">История операций</h3>
+                    <button onclick="downloadCSV()" class="text-[10px] uppercase font-bold tracking-widest text-zinc-500 hover:text-white cursor-pointer transition-colors bg-zinc-800/50 px-3 py-1.5 rounded-md border border-zinc-700/50">Export CSV</button>
+                </div>
+                <div id="log" class="space-y-3 max-h-64 overflow-y-auto pr-3"></div>
             </div>
 
-            <!-- Dots -->
-            <div class="flex justify-center gap-2 mt-4">
-                <div id="dot0" class="w-2 h-2 rounded-full bg-blue-500 transition-colors"></div>
-                <div id="dot1" class="w-2 h-2 rounded-full bg-zinc-700 transition-colors"></div>
-                <div id="dot2" class="w-2 h-2 rounded-full bg-zinc-700 transition-colors"></div>
+            <div class="text-center pb-8">
+                <button onclick="clearDay()" class="text-zinc-600 text-[10px] uppercase font-bold tracking-widest hover:text-rose-500 cursor-pointer transition-colors">Очистить историю за этот день</button>
             </div>
         </div>
 
-        <!-- Log -->
-        <div class="bento-card p-6 mb-8 relative z-10">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-zinc-400 uppercase text-[10px] font-bold tracking-[0.2em]">История операций</h3>
-                <button onclick="downloadCSV()" class="text-[10px] uppercase font-bold tracking-widest text-zinc-500 hover:text-white cursor-pointer transition-colors bg-zinc-800/50 px-3 py-1.5 rounded-md border border-zinc-700/50">Export CSV</button>
+        <!-- ======================= -->
+        <!-- VIEW 2: CALENDAR        -->
+        <!-- ======================= -->
+        <div id="view-cal" class="hidden">
+            <div class="bento-card p-4 md:p-6 mb-8 relative z-10">
+                <div class="text-center mb-6">
+                    <h3 id="calendar-month-title" class="text-white text-lg font-bold tracking-wide capitalize">...</h3>
+                    <p class="text-[10px] uppercase font-bold tracking-widest text-zinc-500 mt-1">Кликни на день, чтобы перейти к нему</p>
+                </div>
+                <div class="grid grid-cols-7 gap-1 md:gap-3 text-center mb-2">
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-zinc-500">Пн</div>
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-zinc-500">Вт</div>
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-zinc-500">Ср</div>
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-zinc-500">Чт</div>
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-zinc-500">Пт</div>
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-zinc-500">Сб</div>
+                    <div class="text-[9px] uppercase tracking-widest font-bold text-rose-500/70">Вс</div>
+                </div>
+                <!-- Сетка генерируется через JS -->
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1 md:gap-3"></div>
             </div>
-            <div id="log" class="space-y-3 max-h-64 overflow-y-auto pr-3"></div>
         </div>
 
-        <div class="text-center pb-8">
-            <button onclick="clearDay()" class="text-zinc-600 text-[10px] uppercase font-bold tracking-widest hover:text-rose-500 cursor-pointer transition-colors">Очистить историю за этот день</button>
-        </div>
     </div>
 
     <script>
@@ -141,8 +175,35 @@
         let currentChartIdx = 0;
         const chartTitles = ['Активность за день (часы)', 'Соотношение за день', 'Статистика за месяц (дни)'];
 
+        let currentTab = 'dash';
+
         function setSync(show) {
             document.getElementById('sync-status').style.opacity = show ? "1" : "0";
+        }
+
+        // --- УПРАВЛЕНИЕ ВКЛАДКАМИ ---
+        function setTab(tab) {
+            currentTab = tab;
+            const btnDash = document.getElementById('tab-btn-dash');
+            const btnCal = document.getElementById('tab-btn-cal');
+            
+            if(tab === 'dash') {
+                document.getElementById('view-dash').classList.remove('hidden');
+                document.getElementById('view-cal').classList.add('hidden');
+                document.getElementById('dash-balances').classList.remove('opacity-0', 'pointer-events-none');
+                
+                btnDash.className = "px-6 py-2.5 rounded-full bg-zinc-800 text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-md cursor-pointer";
+                btnCal.className = "px-6 py-2.5 rounded-full bg-transparent border border-zinc-800/60 text-zinc-500 hover:text-white hover:bg-zinc-800/30 text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer";
+            } else {
+                document.getElementById('view-dash').classList.add('hidden');
+                document.getElementById('view-cal').classList.remove('hidden');
+                document.getElementById('dash-balances').classList.add('opacity-0', 'pointer-events-none');
+                
+                btnCal.className = "px-6 py-2.5 rounded-full bg-zinc-800 text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-md cursor-pointer";
+                btnDash.className = "px-6 py-2.5 rounded-full bg-transparent border border-zinc-800/60 text-zinc-500 hover:text-white hover:bg-zinc-800/30 text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer";
+                
+                renderCalendar();
+            }
         }
 
         async function loadData() {
@@ -247,19 +308,19 @@
             `}).join('') : '<p class="text-center text-zinc-600 text-sm py-6">Операций пока нет.</p>';
 
             if (chart1 && chart2 && chart3) {
-                // Обновление графика 1 (Линии по часам)
+                // График 1: Часы
                 const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
                 filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
                 chart1.data.datasets[0].data = hIn;
                 chart1.data.datasets[1].data = hOut;
                 chart1.update();
 
-                // Обновление графика 2 (Пирог)
+                // График 2: Пирог
                 chart2.data.datasets[0].data = [sumIn, sumOut];
                 chart2.update();
 
-                // Обновление графика 3 (Столбцы по месяцу)
-                const monthYear = dateStr.substring(3); // 'MM.YYYY'
+                // График 3: Столбцы по месяцу
+                const monthYear = dateStr.substring(3); 
                 const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
                 const monthlyLogs = logs.filter(l => l.date && l.date.endsWith(monthYear));
                 
@@ -279,19 +340,84 @@
                 chart3.data.datasets[1].data = mOut;
                 chart3.update();
             }
+
+            // Если открыт календарь — обновляем и его тоже
+            if (currentTab === 'cal') renderCalendar();
+        }
+
+        // --- РЕНДЕР КАЛЕНДАРЯ ---
+        function renderCalendar() {
+            const year = selectedDate.getFullYear();
+            const month = selectedDate.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Определяем первый день месяца (смещаем под Пн = 0)
+            let firstDay = new Date(year, month, 1).getDay();
+            firstDay = firstDay === 0 ? 6 : firstDay - 1; 
+
+            const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            document.getElementById('calendar-month-title').innerText = `${monthNames[month]} ${year}`;
+
+            const grid = document.getElementById('calendar-grid');
+            let html = '';
+
+            // Пустые ячейки для выравнивания начала месяца
+            for(let i = 0; i < firstDay; i++) {
+                html += `<div class="p-1 rounded-xl bg-zinc-900/10 border border-zinc-800/10 opacity-30"></div>`;
+            }
+
+            // Ячейки дней
+            for(let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${String(d).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
+                const dayLogs = logs.filter(l => l.date === dateStr);
+                
+                const sumIn = dayLogs.filter(l => l.type === 'in').reduce((a, b) => a + b.amount, 0);
+                const sumOut = dayLogs.filter(l => l.type === 'out').reduce((a, b) => a + b.amount, 0);
+                
+                const isSelected = dateStr === selectedDate.toLocaleDateString('ru-RU');
+                const isToday = dateStr === new Date().toLocaleDateString('ru-RU');
+                
+                let borderClass = 'border-zinc-800/60';
+                let bgClass = 'bg-zinc-900/30 hover:bg-zinc-800/60 hover:border-zinc-600';
+                
+                if (isSelected) {
+                    borderClass = 'border-blue-500/50';
+                    bgClass = 'bg-blue-500/10';
+                } else if (isToday) {
+                    borderClass = 'border-zinc-400';
+                }
+
+                html += `
+                <div onclick="goToSpecificDate(${d})" class="p-1.5 md:p-2 rounded-xl border ${borderClass} ${bgClass} flex flex-col items-center justify-start min-h-[60px] md:min-h-[85px] transition-colors cursor-pointer group">
+                    <span class="text-[10px] md:text-xs font-bold ${isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'} mb-1">${d}</span>
+                    <div class="flex flex-col gap-[2px] items-center w-full">
+                        ${sumIn > 0 ? `<span class="text-[9px] md:text-[11px] font-bold text-blue-400 leading-none">+${sumIn}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>` : ''}
+                        ${sumOut > 0 ? `<span class="text-[9px] md:text-[11px] font-bold text-rose-400 leading-none">-${sumOut}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>` : ''}
+                    </div>
+                </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        // Переход из Календаря в выбранный день на Дашборде
+        function goToSpecificDate(day) {
+            const year = selectedDate.getFullYear();
+            const month = selectedDate.getMonth();
+            selectedDate = new Date(year, month, day);
+            updateUI();
+            setTab('dash');
         }
 
         function changeDay(o) { selectedDate.setDate(selectedDate.getDate() + o); updateUI(); }
         function goToToday() { selectedDate = new Date(); updateUI(); }
 
         function init() {
-            // Настройка современного стиля графиков
             Chart.defaults.color = '#71717a';
             Chart.defaults.font.family = 'Inter';
             
             const tooltipConfig = { backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#a1a1aa', padding: 12, borderColor: '#27272a', borderWidth: 1, cornerRadius: 8 };
 
-            // График 1: Активность по часам
             const ctx1 = document.getElementById('activityChart1').getContext('2d');
             chart1 = new Chart(ctx1, {
                 type: 'line',
@@ -313,30 +439,19 @@
                 }
             });
 
-            // График 2: Круговая диаграмма
             const ctx2 = document.getElementById('activityChart2').getContext('2d');
             chart2 = new Chart(ctx2, {
                 type: 'doughnut',
                 data: {
                     labels: ['Новые', 'Поверка'],
-                    datasets: [{
-                        data: [0, 0],
-                        backgroundColor: ['#3b82f6', '#f43f5e'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
+                    datasets: [{ data: [0, 0], backgroundColor: ['#3b82f6', '#f43f5e'], borderWidth: 0, hoverOffset: 4 }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    cutout: '70%',
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 20, usePointStyle: true } }, 
-                        tooltip: tooltipConfig 
-                    }
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: { legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 20, usePointStyle: true } }, tooltip: tooltipConfig }
                 }
             });
 
-            // График 3: Столбцы по дням месяца
             const ctx3 = document.getElementById('activityChart3').getContext('2d');
             chart3 = new Chart(ctx3, {
                 type: 'bar',
@@ -353,7 +468,15 @@
                     plugins: { legend: { display: false }, tooltip: tooltipConfig }, 
                     scales: { 
                         y: { beginAtZero: true, grid: { color: '#27272a', drawBorder: false }, border: { dash: [4, 4] }, stacked: false }, 
-                        x: { grid: { display: false, drawBorder: false }, stacked: false } 
+                        x: { 
+                            grid: { display: false, drawBorder: false }, 
+                            stacked: false,
+                            ticks: {
+                                autoSkip: false, // ИСПРАВЛЕНИЕ: Жестко заставляем показывать каждый день!
+                                maxRotation: 45, // Слегка поворачиваем цифры, чтобы они точно влезли
+                                font: { size: 10 }
+                            }
+                        } 
                     }
                 }
             });
