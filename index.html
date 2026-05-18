@@ -96,7 +96,7 @@
                 <input type="number" id="qty-out" placeholder="Сколько на поверку?" 
                     class="bg-transparent w-full outline-none text-white text-lg font-medium placeholder:text-zinc-600">
                 <button id="btn-out" class="w-[140px] bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 py-4 rounded-xl font-bold cursor-pointer transition-colors whitespace-nowrap">
-                    Списать
+                    Добавить
                 </button>
             </div>
 
@@ -288,7 +288,7 @@
             
             const sumIn = filtered.filter(l => l.type === 'in').reduce((a,b) => a + b.amount, 0);
             const sumOut = filtered.filter(l => l.type === 'out').reduce((a,b) => a + b.amount, 0);
-            const sumTotal = sumIn + sumOut; // Общая пропускная способность за день
+            const sumTotal = sumIn + sumOut; 
             
             const isMobile = window.innerWidth < 768;
             const spanHtml = `<span class="${isMobile ? 'text-[10px]' : 'text-sm'} font-medium text-zinc-500">шт.</span>`;
@@ -376,7 +376,7 @@
                 
                 const sumIn = dayLogs.filter(l => l.type === 'in').reduce((a, b) => a + b.amount, 0);
                 const sumOut = dayLogs.filter(l => l.type === 'out').reduce((a, b) => a + b.amount, 0);
-                const dayTotal = sumIn + sumOut; // Общий итог за день
+                const dayTotal = sumIn + sumOut; 
                 
                 const isSelected = dateStr === selectedDate.toLocaleDateString('ru-RU');
                 const isToday = dateStr === new Date().toLocaleDateString('ru-RU');
@@ -495,7 +495,6 @@
                 if (e.key === 'Enter') addData('out');
             });
             
-            // Чтобы шрифты на ресайзе окна адаптировались
             window.addEventListener('resize', updateUI);
             
             updateUI();
