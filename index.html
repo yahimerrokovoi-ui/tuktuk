@@ -28,8 +28,8 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
         
-        .input-glow-blue:focus-within { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); }
-        .input-glow-rose:focus-within { box-shadow: 0 0 20px rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); }
+        .input-glow-blue:focus-within { box-shadow: 0 0 30px rgba(59, 130, 246, 0.3); border-color: rgba(59, 130, 246, 0.6); }
+        .input-glow-rose:focus-within { box-shadow: 0 0 30px rgba(244, 63, 94, 0.3); border-color: rgba(244, 63, 94, 0.6); }
     </style>
 </head>
 <body class="p-4 md:p-8 selection:bg-blue-500/30">
@@ -40,8 +40,8 @@
 
         <!-- Tabs Navigation -->
         <div class="flex justify-center gap-2 mb-8 relative z-20">
-            <button id="tab-btn-dash" onclick="setTab('dash')" class="px-6 py-2.5 rounded-full bg-zinc-800 text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-md">Дашборд</button>
-            <button id="tab-btn-cal" onclick="setTab('cal')" class="px-6 py-2.5 rounded-full bg-transparent border border-zinc-800/60 text-zinc-500 hover:text-white hover:bg-zinc-800/30 text-[10px] font-bold uppercase tracking-widest transition-all">Календарь</button>
+            <button id="tab-btn-dash" onclick="setTab('dash')" class="px-6 py-2.5 rounded-full bg-zinc-800 text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-md cursor-pointer">Дашборд</button>
+            <button id="tab-btn-cal" onclick="setTab('cal')" class="px-6 py-2.5 rounded-full bg-transparent border border-zinc-800/60 text-zinc-500 hover:text-white hover:bg-zinc-800/30 text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer">Календарь</button>
         </div>
 
         <!-- Header Controls (Visible across both views) -->
@@ -59,16 +59,21 @@
                 </button>
             </div>
             
-            <div id="dash-balances" class="flex gap-3 w-full md:w-auto transition-opacity duration-300">
-                <div class="flex-1 md:flex-none text-right bg-zinc-900/50 px-5 py-3 rounded-2xl border border-zinc-800/80 relative overflow-hidden">
-                    <div class="absolute inset-0 bg-blue-500/5"></div>
-                    <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold relative z-10">Новые</div>
-                    <div id="total-in" class="text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-sm font-medium text-zinc-500">шт.</span></div>
+            <div id="dash-balances" class="grid grid-cols-3 md:flex gap-2 md:gap-4 w-full md:w-auto transition-opacity duration-300">
+                <div class="text-center md:text-right bg-zinc-900/80 px-2 md:px-5 py-3 rounded-2xl border border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.15)] relative overflow-hidden">
+                    <div class="absolute inset-0 bg-blue-500/15 pointer-events-none"></div>
+                    <div class="text-[9px] md:text-[10px] uppercase tracking-widest text-blue-300/90 font-bold relative z-10">Новые</div>
+                    <div id="total-in" class="text-xl md:text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-[10px] md:text-sm font-medium text-zinc-500">шт.</span></div>
                 </div>
-                <div class="flex-1 md:flex-none text-right bg-zinc-900/50 px-5 py-3 rounded-2xl border border-zinc-800/80 relative overflow-hidden">
-                    <div class="absolute inset-0 bg-rose-500/5"></div>
-                    <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold relative z-10">Поверка</div>
-                    <div id="total-out" class="text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-sm font-medium text-zinc-500">шт.</span></div>
+                <div class="text-center md:text-right bg-zinc-900/80 px-2 md:px-5 py-3 rounded-2xl border border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.15)] relative overflow-hidden">
+                    <div class="absolute inset-0 bg-rose-500/15 pointer-events-none"></div>
+                    <div class="text-[9px] md:text-[10px] uppercase tracking-widest text-rose-300/90 font-bold relative z-10">Поверка</div>
+                    <div id="total-out" class="text-xl md:text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-[10px] md:text-sm font-medium text-zinc-500">шт.</span></div>
+                </div>
+                <div class="text-center md:text-right bg-zinc-900/80 px-2 md:px-5 py-3 rounded-2xl border border-violet-500/40 shadow-[0_0_20px_rgba(139,92,246,0.15)] relative overflow-hidden">
+                    <div class="absolute inset-0 bg-violet-500/15 pointer-events-none"></div>
+                    <div class="text-[9px] md:text-[10px] uppercase tracking-widest text-violet-300/90 font-bold relative z-10">Итого</div>
+                    <div id="total-sum" class="text-xl md:text-3xl font-black text-white relative z-10 tracking-tighter">0 <span class="text-[10px] md:text-sm font-medium text-zinc-500">шт.</span></div>
                 </div>
             </div>
         </div>
@@ -283,9 +288,14 @@
             
             const sumIn = filtered.filter(l => l.type === 'in').reduce((a,b) => a + b.amount, 0);
             const sumOut = filtered.filter(l => l.type === 'out').reduce((a,b) => a + b.amount, 0);
+            const sumTotal = sumIn + sumOut; // Общая пропускная способность за день
             
-            document.getElementById('total-in').innerHTML = `${sumIn} <span class="text-sm font-medium text-zinc-500">шт.</span>`;
-            document.getElementById('total-out').innerHTML = `${sumOut} <span class="text-sm font-medium text-zinc-500">шт.</span>`;
+            const isMobile = window.innerWidth < 768;
+            const spanHtml = `<span class="${isMobile ? 'text-[10px]' : 'text-sm'} font-medium text-zinc-500">шт.</span>`;
+            
+            document.getElementById('total-in').innerHTML = `${sumIn} ${spanHtml}`;
+            document.getElementById('total-out').innerHTML = `${sumOut} ${spanHtml}`;
+            document.getElementById('total-sum').innerHTML = `${sumTotal} ${spanHtml}`;
 
             const logEl = document.getElementById('log');
             logEl.innerHTML = filtered.length ? [...filtered].reverse().map(l => {
@@ -308,18 +318,15 @@
             `}).join('') : '<p class="text-center text-zinc-600 text-sm py-6">Операций пока нет.</p>';
 
             if (chart1 && chart2 && chart3) {
-                // График 1: Часы
                 const hIn = Array(24).fill(0), hOut = Array(24).fill(0);
                 filtered.forEach(l => l.type === 'in' ? hIn[l.hour] += l.amount : hOut[l.hour] += l.amount);
                 chart1.data.datasets[0].data = hIn;
                 chart1.data.datasets[1].data = hOut;
                 chart1.update();
 
-                // График 2: Пирог
                 chart2.data.datasets[0].data = [sumIn, sumOut];
                 chart2.update();
 
-                // График 3: Столбцы по месяцу
                 const monthYear = dateStr.substring(3); 
                 const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
                 const monthlyLogs = logs.filter(l => l.date && l.date.endsWith(monthYear));
@@ -341,7 +348,6 @@
                 chart3.update();
             }
 
-            // Если открыт календарь — обновляем и его тоже
             if (currentTab === 'cal') renderCalendar();
         }
 
@@ -351,7 +357,6 @@
             const month = selectedDate.getMonth();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             
-            // Определяем первый день месяца (смещаем под Пн = 0)
             let firstDay = new Date(year, month, 1).getDay();
             firstDay = firstDay === 0 ? 6 : firstDay - 1; 
 
@@ -361,18 +366,17 @@
             const grid = document.getElementById('calendar-grid');
             let html = '';
 
-            // Пустые ячейки для выравнивания начала месяца
             for(let i = 0; i < firstDay; i++) {
                 html += `<div class="p-1 rounded-xl bg-zinc-900/10 border border-zinc-800/10 opacity-30"></div>`;
             }
 
-            // Ячейки дней
             for(let d = 1; d <= daysInMonth; d++) {
                 const dateStr = `${String(d).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
                 const dayLogs = logs.filter(l => l.date === dateStr);
                 
                 const sumIn = dayLogs.filter(l => l.type === 'in').reduce((a, b) => a + b.amount, 0);
                 const sumOut = dayLogs.filter(l => l.type === 'out').reduce((a, b) => a + b.amount, 0);
+                const dayTotal = sumIn + sumOut; // Общий итог за день
                 
                 const isSelected = dateStr === selectedDate.toLocaleDateString('ru-RU');
                 const isToday = dateStr === new Date().toLocaleDateString('ru-RU');
@@ -388,19 +392,23 @@
                 }
 
                 html += `
-                <div onclick="goToSpecificDate(${d})" class="p-1.5 md:p-2 rounded-xl border ${borderClass} ${bgClass} flex flex-col items-center justify-start min-h-[60px] md:min-h-[85px] transition-colors cursor-pointer group">
+                <div onclick="goToSpecificDate(${d})" class="p-1.5 md:p-2 rounded-xl border ${borderClass} ${bgClass} flex flex-col items-center justify-start min-h-[75px] md:min-h-[90px] transition-colors cursor-pointer group">
                     <span class="text-[10px] md:text-xs font-bold ${isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'} mb-1">${d}</span>
-                    <div class="flex flex-col gap-[2px] items-center w-full">
-                        ${sumIn > 0 ? `<span class="text-[9px] md:text-[11px] font-bold text-blue-400 leading-none">+${sumIn}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>` : ''}
-                        ${sumOut > 0 ? `<span class="text-[9px] md:text-[11px] font-bold text-rose-400 leading-none">-${sumOut}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>` : ''}
+                    <div class="flex flex-col gap-[2px] items-center w-full flex-grow">
+                        ${sumIn > 0 ? `<span class="text-[9px] md:text-[11px] font-bold text-blue-400 leading-none">${sumIn}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>` : ''}
+                        ${sumOut > 0 ? `<span class="text-[9px] md:text-[11px] font-bold text-rose-400 leading-none">${sumOut}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>` : ''}
                     </div>
+                    ${dayTotal > 0 ? `
+                    <div class="w-full border-t border-zinc-700/50 mt-1 pt-1 flex justify-center">
+                        <span class="text-[10px] md:text-xs font-black text-white leading-none">${dayTotal}<span class="text-[7px] text-zinc-500 font-normal ml-[1px]">шт.</span></span>
+                    </div>
+                    ` : ''}
                 </div>
                 `;
             }
             grid.innerHTML = html;
         }
 
-        // Переход из Календаря в выбранный день на Дашборде
         function goToSpecificDate(day) {
             const year = selectedDate.getFullYear();
             const month = selectedDate.getMonth();
@@ -471,11 +479,7 @@
                         x: { 
                             grid: { display: false, drawBorder: false }, 
                             stacked: false,
-                            ticks: {
-                                autoSkip: false, // ИСПРАВЛЕНИЕ: Жестко заставляем показывать каждый день!
-                                maxRotation: 45, // Слегка поворачиваем цифры, чтобы они точно влезли
-                                font: { size: 10 }
-                            }
+                            ticks: { autoSkip: false, maxRotation: 45, font: { size: 10 } }
                         } 
                     }
                 }
@@ -490,6 +494,9 @@
             document.getElementById('qty-out').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') addData('out');
             });
+            
+            // Чтобы шрифты на ресайзе окна адаптировались
+            window.addEventListener('resize', updateUI);
             
             updateUI();
             loadData();
