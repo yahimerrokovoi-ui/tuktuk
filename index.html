@@ -6,6 +6,7 @@
     <title>Tracker | Новые & Поверка</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
@@ -182,11 +183,65 @@
 
         let currentTab = 'dash';
 
+        // Custom UI components to replace native alerts/confirms
+        function showCustomConfirm(message, onConfirm) {
+            const confirmBox = document.createElement('div');
+            confirmBox.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity';
+            confirmBox.innerHTML = `
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center transform scale-95 transition-transform duration-200">
+                    <h3 class="text-lg font-bold text-white mb-2">Подтверждение</h3>
+                    <p class="text-zinc-400 text-sm mb-6">${message}</p>
+                    <div class="flex gap-3 justify-center">
+                        <button id="cancel-confirm-btn" class="flex-1 py-2.5 rounded-xl border border-zinc-700 text-zinc-300 font-medium hover:bg-zinc-800 transition-colors">Отмена</button>
+                        <button id="ok-confirm-btn" class="flex-1 py-2.5 rounded-xl bg-rose-500 text-white font-medium hover:bg-rose-600 transition-colors">Удалить</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmBox);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                confirmBox.querySelector('div').classList.remove('scale-95');
+                confirmBox.querySelector('div').classList.add('scale-100');
+            });
+
+            document.getElementById('cancel-confirm-btn').onclick = () => {
+                confirmBox.remove();
+            };
+            
+            document.getElementById('ok-confirm-btn').onclick = () => {
+                confirmBox.remove();
+                if(onConfirm) onConfirm();
+            };
+        }
+
+        function showCustomAlert(message) {
+            const alertBox = document.createElement('div');
+            alertBox.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity';
+            alertBox.innerHTML = `
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center transform scale-95 transition-transform duration-200">
+                    <h3 class="text-lg font-bold text-white mb-2">Внимание</h3>
+                    <p class="text-zinc-400 text-sm mb-6">${message}</p>
+                    <button id="ok-alert-btn" class="w-full py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors">Понятно</button>
+                </div>
+            `;
+            document.body.appendChild(alertBox);
+
+            requestAnimationFrame(() => {
+                alertBox.querySelector('div').classList.remove('scale-95');
+                alertBox.querySelector('div').classList.add('scale-100');
+            });
+
+            document.getElementById('ok-alert-btn').onclick = () => {
+                alertBox.remove();
+            };
+        }
+
         function setSync(show) {
             document.getElementById('sync-status').style.opacity = show ? "1" : "0";
         }
 
-        // --- УПРАВЛЕНИЕ ВКЛАДКАМИ ---
+        // --- STREAMING_CHUNK:Управление вкладками ---
         function setTab(tab) {
             currentTab = tab;
             const btnDash = document.getElementById('tab-btn-dash');
@@ -211,6 +266,7 @@
             }
         }
 
+        // --- STREAMING_CHUNK:Загрузка и сохранение данных Supabase ---
         async function loadData() {
             setSync(true);
             const { data, error } = await db.from('transactions').select('*');
@@ -259,6 +315,7 @@
             setSync(false);
         }
 
+        // --- STREAMING_CHUNK:Логика обновления UI и графиков ---
         function changeChart(dir) {
             currentChartIdx = (currentChartIdx + dir + 3) % 3;
             document.getElementById('chart-title-text').innerText = chartTitles[currentChartIdx];
@@ -351,7 +408,7 @@
             if (currentTab === 'cal') renderCalendar();
         }
 
-        // --- РЕНДЕР КАЛЕНДАРЯ ---
+        // --- STREAMING_CHUNK:Рендеринг календаря ---
         function renderCalendar() {
             const year = selectedDate.getFullYear();
             const month = selectedDate.getMonth();
@@ -409,6 +466,7 @@
             grid.innerHTML = html;
         }
 
+        // --- STREAMING_CHUNK:Инициализация графиков и событий ---
         function goToSpecificDate(day) {
             const year = selectedDate.getFullYear();
             const month = selectedDate.getMonth();
@@ -424,6 +482,9 @@
             Chart.defaults.color = '#71717a';
             Chart.defaults.font.family = 'Inter';
             
+            // Регистрируем плагин datalabels глобально, но будем использовать только где нужно
+            Chart.register(ChartDataLabels);
+
             const tooltipConfig = { backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#a1a1aa', padding: 12, borderColor: '#27272a', borderWidth: 1, cornerRadius: 8 };
 
             const ctx1 = document.getElementById('activityChart1').getContext('2d');
@@ -439,10 +500,22 @@
                 options: { 
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: false }, tooltip: tooltipConfig }, 
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: tooltipConfig,
+                        datalabels: { display: false } // Отключаем метки для этого графика
+                    }, 
                     scales: { 
                         y: { beginAtZero: true, grid: { color: '#27272a', drawBorder: false }, border: { dash: [4, 4] } }, 
-                        x: { grid: { display: false, drawBorder: false } } 
+                        x: { 
+                            grid: { display: false, drawBorder: false },
+                            ticks: {
+                                callback: function(value, index) {
+                                    // Прячем каждую вторую метку на мобильных устройствах
+                                    return (window.innerWidth < 768 && index % 2 !== 0) ? null : this.getLabelForValue(value);
+                                }
+                            }
+                        } 
                     } 
                 }
             });
@@ -456,7 +529,27 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false, cutout: '70%',
-                    plugins: { legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 20, usePointStyle: true } }, tooltip: tooltipConfig }
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 20, usePointStyle: true } }, 
+                        tooltip: tooltipConfig,
+                        datalabels: {
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: (value, ctx) => {
+                                let sum = 0;
+                                let dataArr = ctx.chart.data.datasets[0].data;
+                                dataArr.map(data => {
+                                    sum += data;
+                                });
+                                if (sum === 0 || value === 0) return '';
+                                let percentage = (value * 100 / sum).toFixed(0) + "%";
+                                return percentage;
+                            }
+                        }
+                    }
                 }
             });
 
@@ -473,13 +566,25 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: false }, tooltip: tooltipConfig }, 
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: tooltipConfig,
+                        datalabels: { display: false } // Отключаем метки для этого графика
+                    }, 
                     scales: { 
                         y: { beginAtZero: true, grid: { color: '#27272a', drawBorder: false }, border: { dash: [4, 4] }, stacked: false }, 
                         x: { 
                             grid: { display: false, drawBorder: false }, 
                             stacked: false,
-                            ticks: { autoSkip: false, maxRotation: 45, font: { size: 10 } }
+                            ticks: { 
+                                autoSkip: false, 
+                                maxRotation: 45, 
+                                font: { size: 10 },
+                                callback: function(value, index) {
+                                    // Прячем каждую вторую метку на мобильных устройствах
+                                    return (window.innerWidth < 768 && index % 2 !== 0) ? null : this.getLabelForValue(value);
+                                }
+                            }
                         } 
                     }
                 }
@@ -502,18 +607,19 @@
         }
 
         async function clearDay() {
-            if(!confirm('Безвозвратно удалить все записи за этот день?')) return;
-            const dateStr = selectedDate.toLocaleDateString('ru-RU');
-            const toDelete = logs.filter(l => l.date === dateStr);
-            logs = logs.filter(l => l.date !== dateStr);
-            updateUI();
-            for(let l of toDelete) await db.from('transactions').delete().eq('id', l.id);
+            showCustomConfirm('Безвозвратно удалить все записи за этот день?', async () => {
+                const dateStr = selectedDate.toLocaleDateString('ru-RU');
+                const toDelete = logs.filter(l => l.date === dateStr);
+                logs = logs.filter(l => l.date !== dateStr);
+                updateUI();
+                for(let l of toDelete) await db.from('transactions').delete().eq('id', l.id);
+            });
         }
 
         function downloadCSV() {
             const dateStr = selectedDate.toLocaleDateString('ru-RU');
             const filtered = logs.filter(l => l.date === dateStr);
-            if (filtered.length === 0) return alert('В этот день нечего выгружать.');
+            if (filtered.length === 0) return showCustomAlert('В этот день нечего выгружать.');
             
             let csv = "\uFEFFДата,Время,Тип операции,Количество\n";
             filtered.forEach(l => { 
